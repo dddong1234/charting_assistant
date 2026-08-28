@@ -48,7 +48,8 @@ export interface DraftValidation {
 
 const validTime = /^(?:[01]\d|2[0-3]):[0-5]\d$/
 const soapLabels = ['S', 'O', 'A', 'P'] as const
-const unsafeSuggestionPattern = /진단|처방|오더|권고|diagnos|order|recommend/i
+const unsafeSuggestionPattern = /진단|처방|오더|권고|diagnos|order|recommend|(?:용량|투여량|용법).*(?:증량|감량|변경|조절|필요)|(?:증량|감량|변경|조절).*(?:용량|투여량|용법)|(?:추가\s*)?검사\s*(?:필요|시행\s*필요|권고|요청|계획)|치료\s*(?:시작|변경|중단|필요|권고|계획)|(?:고위험|응급|중증|위급|불안정)\s*(?:상태|환자)?\s*(?:로|으로)?\s*(?:판단|결정|분류|평가)/i
+const factualEvidencePattern = /(?:\b(?:BP|PR|RR|BT|SpO₂)\b|NRS\s*\d+점|(?:PO|IV|IM|SC)\s*투약함|투약(?:함|\s*후)|섭취|배액|보행|호소(?:함|없음)|확인됨|관찰됨|침상|호흡|앉기|호출벨|양호|없음|안정)/i
 
 export function parseTime(timestamp: string): number | null {
   if (!validTime.test(timestamp)) {
@@ -98,7 +99,7 @@ export function validateDraft(draft: Pick<NursingNote, 'timestamp' | 'narrative'
 
 export function getSuggestion(category: NoteCategory, evidence: Evidence[]): Suggestion | null {
   const supportingEvidence = evidence.filter(
-    (item) => item.category === category && !unsafeSuggestionPattern.test(item.detail),
+    (item) => item.category === category && isSafeFactualEvidence(item.detail),
   )
 
   if (supportingEvidence.length === 0) {
@@ -111,6 +112,10 @@ export function getSuggestion(category: NoteCategory, evidence: Evidence[]): Sug
     completion: supportingEvidence.map((item) => item.detail).join(' '),
     evidenceIds: supportingEvidence.map((item) => item.id),
   }
+}
+
+function isSafeFactualEvidence(detail: string): boolean {
+  return !unsafeSuggestionPattern.test(detail) && factualEvidencePattern.test(detail)
 }
 
 function hasOrderedSoapLines(narrative: string): boolean {

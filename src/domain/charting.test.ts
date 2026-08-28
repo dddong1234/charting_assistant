@@ -77,19 +77,34 @@ describe('getSuggestion', () => {
     expect(getSuggestion(category, evidence)?.evidenceIds).toEqual(evidenceIds)
   })
 
-  it('returns completion text with provenance and excludes unsafe diagnosis or order recommendations', () => {
+  it('returns the full factual completion text with provenance', () => {
     const suggestion = getSuggestion('PRN', evidence)
 
     expect(suggestion).toMatchObject({ category: 'PRN', evidenceIds: ['evidence-prn'] })
-    expect(suggestion?.completion).toContain('NRS 5점')
-    expect(suggestion?.completion).not.toMatch(/진단|처방|오더|권고|diagnos|order|recommend/i)
+    expect(suggestion?.completion).toBe('복부 통증 NRS 5점 호소하여 PRN 진통제 투약함.')
   })
 
-  it('does not turn unsafe evidence into a suggestion', () => {
+  it.each([
+    ['medication dose change', '진통제 용량 증량 필요'],
+    ['test recommendation', '추가 검사 필요'],
+    ['treatment recommendation', '치료 시작 필요'],
+    ['acuity decision', '고위험 상태로 판단됨'],
+  ])('does not turn a %s into a suggestion', (_description, detail) => {
     const unsafeEvidence: Evidence[] = [
-      { id: 'evidence-unsafe', timestamp: '22:00', category: 'PRN', label: 'unsafe', detail: '추가 검사 오더를 권고함.', state: '확인됨' },
+      { id: 'evidence-unsafe', timestamp: '22:00', category: 'PRN', label: 'unsafe', detail, state: '확인됨' },
     ]
 
     expect(getSuggestion('PRN', unsafeEvidence)).toBeNull()
+  })
+
+  it('keeps factual medication-administration evidence eligible for a suggestion', () => {
+    const administrationEvidence: Evidence[] = [
+      { id: 'evidence-administration', timestamp: '22:00', category: 'PRN', label: '투약', detail: 'Stilnox 10mg PO 투약함.', state: '확인됨' },
+    ]
+
+    expect(getSuggestion('PRN', administrationEvidence)).toMatchObject({
+      completion: 'Stilnox 10mg PO 투약함.',
+      evidenceIds: ['evidence-administration'],
+    })
   })
 })

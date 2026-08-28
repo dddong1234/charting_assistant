@@ -2,7 +2,7 @@
 
 ## Decision
 
-The deterministic demo suggestion function only joins same-category synthetic evidence details that do not match diagnosis, order, or recommendation language. Each result includes the exact source evidence IDs and remains separate from the saved nursing-note narrative.
+The deterministic demo suggestion function only joins same-category synthetic evidence details that both match factual-observation language and do not match diagnosis, order, medication-change, test, treatment-recommendation, or acuity-decision language. Each result includes the exact source evidence IDs and remains separate from the saved nursing-note narrative.
 
 ## Reason
 
@@ -16,8 +16,8 @@ The MVP must demonstrate evidence-linked completion while preserving nurse revie
 
 ## Risk
 
-Keyword filtering is demo guardrail rather than a complete clinical-safety system. It is intentionally paired with fixture-only data, visible provenance, and explicit nurse acceptance.
+The allow-list and keyword filtering are demo guardrails rather than a complete clinical-safety system. They are intentionally paired with fixture-only data, visible provenance, and explicit nurse acceptance.
 
 ## Validation method
 
-Domain tests verify category selection, evidence IDs, safe completion content, and omission of unsafe evidence. The full repository verification runs lint, tests, and the production build.
+Domain tests verify category selection, exact evidence-linked completion text, factual medication-administration eligibility, and omission of medication-change, test, treatment-recommendation, and acuity-decision evidence. The full repository verification runs lint, tests, and the production build.
