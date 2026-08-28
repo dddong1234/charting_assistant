@@ -1,0 +1,227 @@
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: var(--stroke-default) solid var(--color-transparent);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter var(--motion-duration-fast) ease;
+}
+
+.ui-button--small {
+  padding: var(--space-2) var(--space-3);
+}
+
+.ui-button--medium {
+  padding: var(--space-3) var(--space-4);
+}
+
+.ui-button--primary {
+  color: var(--color-text-on-primary);
+  background: var(--color-action-primary);
+}
+
+.ui-button--secondary {
+  color: var(--color-text-primary);
+  background: var(--color-surface-panel);
+  border-color: var(--color-border-strong);
+}
+
+.ui-button:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.ui-button:focus-visible,
+.patient-list-item:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.ui-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-2);
+  border: var(--stroke-default) solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-caption);
+  white-space: nowrap;
+}
+
+.status-chip--ai {
+  color: var(--color-action-primary);
+  background: var(--color-surface-ai);
+  border-color: var(--color-action-primary);
+}
+
+.status-chip--watch,
+.status-chip--review {
+  color: var(--color-text-primary);
+  background: var(--color-status-warning);
+  border-color: var(--color-status-warning);
+}
+
+.status-chip--danger {
+  color: var(--color-text-on-primary);
+  background: var(--color-status-danger);
+  border-color: var(--color-status-danger);
+}
+
+.status-chip--linked {
+  color: var(--color-text-on-primary);
+  background: var(--color-status-success);
+  border-color: var(--color-status-success);
+}
+
+.patient-list-item {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--stroke-default) solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  background: var(--color-surface-panel);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--motion-duration-fast) ease,
+    background-color var(--motion-duration-fast) ease;
+}
+
+.patient-list-item[data-selected='true'] {
+  background: var(--color-surface-selected);
+  border-color: var(--color-border-focus);
+}
+
+.patient-list-item__header,
+.nursing-note-card__header,
+.nursing-note-card__metadata,
+.evidence-item__header {
+  display: flex;
+  align-items: center;
+}
+
+.patient-list-item__header,
+.nursing-note-card__header,
+.evidence-item__header {
+  justify-content: space-between;
+}
+
+.patient-list-item__bed,
+.nursing-note-card__time {
+  color: var(--color-action-primary);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+.patient-list-item__identity {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+.patient-list-item__surgery,
+.evidence-item__header,
+.evidence-item__provenance,
+.nursing-note-card__signature {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+}
+
+.evidence-item,
+.nursing-note-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--stroke-default) solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-panel);
+}
+
+.evidence-item[data-state='watch'] {
+  border-color: var(--color-status-warning);
+}
+
+.evidence-item__detail,
+.evidence-item__provenance,
+.nursing-note-card__narrative {
+  margin: 0;
+}
+
+.evidence-item__detail,
+.nursing-note-card__narrative {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+.evidence-item__provenance,
+.nursing-note-card__signature {
+  color: var(--color-text-muted);
+}
+
+.keyboard-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.keyboard-hint__keycap {
+  padding: var(--space-1) var(--space-2);
+  border: var(--stroke-default) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  background: var(--color-surface-panel);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+}
+
+.keyboard-hint__action {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+}
+
+.nursing-note-card__metadata {
+  gap: var(--space-2);
+}
+
+.nursing-note-card__category {
+  padding: var(--space-1) var(--space-2);
+  border: var(--stroke-default) solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+}
+
+.nursing-note-card__narrative {
+  white-space: pre-wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-button,
+  .patient-list-item {
+    transition: none;
+  }
+}
