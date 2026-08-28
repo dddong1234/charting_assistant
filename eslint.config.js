@@ -17,6 +17,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
+    ignores: ['src/domain/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -33,10 +34,12 @@ export default tseslint.config(
   {
     files: ['src/domain/**/*.{ts,tsx}'],
     rules: {
+      'no-undef': 'error',
       'no-restricted-imports': ['error', {
         paths: domainRestrictions,
         patterns: [
           { group: ['react/*', 'react-dom/*'], message: 'Domain code must remain framework-free.' },
+          { group: ['**/main', '**/main.tsx'], message: 'Domain code cannot depend on the browser bootstrap.' },
           { group: ['**/components/**', '**/features/**', '@/components/**', '@/features/**'], message: 'Domain code cannot depend on UI layers.' },
           { group: ['**/*.css'], message: 'Domain code cannot depend on browser-only modules.' },
         ],
