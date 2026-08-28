@@ -1,8 +1,14 @@
 import { readFileSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
 
-const stylesheetPath = new URL('../src/components/components.css', import.meta.url)
-const stylesheetSource = readFileSync(stylesheetPath, 'utf8')
+const stylesheetPaths = [
+  new URL('../src/styles/tokens.css', import.meta.url),
+  new URL('../src/components/components.css', import.meta.url),
+  new URL('../src/features/charting/charting-workspace.css', import.meta.url),
+]
+const stylesheetSource = stylesheetPaths
+  .map((stylesheetPath) => readFileSync(stylesheetPath, 'utf8'))
+  .join('\n')
 const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>')
 const styleElement = dom.window.document.createElement('style')
 styleElement.textContent = stylesheetSource
@@ -61,11 +67,24 @@ function requireToken(property, value, tokenPrefix) {
   }
 }
 
+function readPixelValue(value, tokenRule) {
+  const tokenMatch = value.trim().match(/^var\((--[^)]+)\)$/)
+  const resolvedValue = tokenMatch
+    ? tokenRule.style.getPropertyValue(tokenMatch[1]).trim()
+    : value.trim()
+  const pixelMatch = resolvedValue.match(/^(\d+)px$/)
+
+  return pixelMatch ? Number(pixelMatch[1]) : null
+}
+
 const buttonRule = requireRule('.ui-button')
 const hoverRule = requireRule('.ui-button:hover:not(:disabled)')
 const disabledRule = requireRule('.ui-button:disabled')
 const focusSelector = '.ui-button:focus-visible,\n.patient-list-item:focus-visible'
 const focusRule = requireRule(focusSelector)
+const tokenRule = requireRule(':root')
+const headerRule = requireRule('.app-header')
+const mediumButtonRule = requireRule('.ui-button--medium')
 
 if (buttonRule) {
   const transition = buttonRule.style.transition
@@ -100,6 +119,59 @@ if (focusRule) {
     focusRule.style.getPropertyValue('outline-offset'),
     'focus-outline-offset',
   )
+}
+
+if (tokenRule && headerRule && buttonRule && mediumButtonRule) {
+  const headerHeightToken = tokenRule.style
+    .getPropertyValue('--layout-app-header-height')
+    .trim()
+  const headerHeightDeclaration = headerRule.style.getPropertyValue('height').trim()
+  const headerPaddingDeclaration =
+    headerRule.style.getPropertyValue('padding').trim().split(/\s+/)[0] ?? ''
+  const headerHeight = readPixelValue(headerHeightDeclaration, tokenRule)
+  const headerVerticalPadding = readPixelValue(headerPaddingDeclaration, tokenRule)
+  const buttonLineHeight = readPixelValue(
+    buttonRule.style.getPropertyValue('line-height'),
+    tokenRule,
+  )
+  const buttonVerticalPadding = readPixelValue(
+    mediumButtonRule.style.getPropertyValue('padding').trim().split(/\s+/)[0] ?? '',
+    tokenRule,
+  )
+  const strokeWidth = readPixelValue(
+    tokenRule.style.getPropertyValue('--stroke-default'),
+    tokenRule,
+  )
+
+  if (headerRule.style.getPropertyValue('box-sizing') !== 'border-box') {
+    failures.push('app header must use border-box geometry.')
+  }
+
+  if (headerHeightDeclaration !== 'var(--layout-app-header-height)') {
+    failures.push(
+      `app header height must use --layout-app-header-height; received ${headerHeightDeclaration || '(empty)'}`,
+    )
+  }
+
+  if (
+    !headerHeightToken ||
+    headerHeight === null ||
+    headerVerticalPadding === null ||
+    buttonLineHeight === null ||
+    buttonVerticalPadding === null ||
+    strokeWidth === null
+  ) {
+    failures.push('app header geometry must resolve from pixel-valued semantic tokens.')
+  } else {
+    const headerContentHeight = headerHeight - (headerVerticalPadding * 2) - strokeWidth
+    const mediumButtonHeight = buttonLineHeight + (buttonVerticalPadding * 2) + (strokeWidth * 2)
+
+    if (mediumButtonHeight > headerContentHeight) {
+      failures.push(
+        `medium button height ${mediumButtonHeight}px exceeds app header content height ${headerContentHeight}px.`,
+      )
+    }
+  }
 }
 
 const forcedColorsRule = findMediaRule('(forced-colors: active)')

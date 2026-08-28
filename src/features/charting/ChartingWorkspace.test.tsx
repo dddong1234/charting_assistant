@@ -55,6 +55,22 @@ describe('ChartingWorkspace', () => {
     )
   })
 
+  it('keeps the suggestion pending and moves focus normally on Shift+Tab', async () => {
+    const user = userEvent.setup()
+    render(<ChartingWorkspace />)
+
+    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    const authoredText =
+      'S: [간호사 확인 필요]\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.'
+
+    await user.click(editor)
+    await user.tab({ shift: true })
+
+    expect(editor).toHaveValue(authoredText)
+    expect(screen.getByLabelText('활성 AI 제안')).toBeVisible()
+    expect(screen.getByLabelText('기록 분류')).toHaveFocus()
+  })
+
   it('dismisses the active suggestion with Escape without changing the editor value', async () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
@@ -202,5 +218,37 @@ describe('ChartingWorkspace', () => {
     const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
     expect(within(evidencePanel).getByText('21:30 PRN · 21:30')).toBeVisible()
     expect(within(evidencePanel).queryByText('14:00 V/S · 14:00')).not.toBeInTheDocument()
+  })
+
+  it('replaces an accepted completion with the selected category draft before adding', async () => {
+    const user = userEvent.setup()
+    render(<ChartingWorkspace />)
+
+    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    await user.click(editor)
+    await user.keyboard('{Tab}')
+    expect(editor).toHaveValue(
+      'S: [간호사 확인 필요]\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.\nA: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.\nP: 상태 확인 결과를 간호사가 검토 후 기록함.',
+    )
+
+    await user.selectOptions(screen.getByLabelText('기록 분류'), 'PRN')
+
+    const prnSeed =
+      'S: [간호사 확인 필요]\nO: 복부 통증 NRS 5점 호소하여 PRN 진통제 투약 후 침상 안정 중임.'
+    expect(editor).toHaveValue(prnSeed)
+    expect(screen.getByLabelText('기록 시간')).toHaveValue('21:30')
+    expect(screen.getByText('21:30 PRN · 21:30')).toBeVisible()
+
+    await user.click(editor)
+    await user.keyboard('{Tab}')
+    expect(editor).toHaveValue(
+      `${prnSeed}\nA: 복부 통증 NRS 5점 호소하여 PRN 진통제 투약 후 침상 안정 중임.\nP: 상태 확인 결과를 간호사가 검토 후 기록함.`,
+    )
+    await user.click(screen.getByRole('button', { name: '기록 추가' }))
+
+    const timeline = screen.getByRole('region', { name: '오늘 간호기록' })
+    expect(within(timeline).getAllByRole('article')).toHaveLength(3)
+    expect(within(timeline).getAllByRole('article', { name: '21:30 PRN 간호기록' })).toHaveLength(2)
+    expect(screen.getByRole('status')).toHaveTextContent('21:30 SOAP 간호기록 1건을 추가했습니다.')
   })
 })

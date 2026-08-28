@@ -22,11 +22,12 @@ interface PatientDraft {
   timestamp: string
 }
 
-function getInitialDraft(patient: Patient): PatientDraft {
-  const evidence = patient.evidence[0]
+function getInitialDraft(patient: Patient, category?: NoteCategory): PatientDraft {
+  const selectedCategory = category ?? patient.evidence[0]?.category ?? '일반'
+  const evidence = patient.evidence.find((item) => item.category === selectedCategory)
 
   return {
-    category: evidence?.category ?? '일반',
+    category: selectedCategory,
     narrative: evidence
       ? `S: [간호사 확인 필요]\nO: ${evidence.detail}`
       : 'S: [간호사 확인 필요]\nO: [객관적 차트 사실 확인 필요]',
@@ -102,7 +103,15 @@ export function ChartingWorkspace() {
       return
     }
 
-    if (event.key !== 'Tab' || !suggestion || !suggestionVisible) {
+    if (
+      event.key !== 'Tab' ||
+      event.shiftKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      !suggestion ||
+      !suggestionVisible
+    ) {
       return
     }
 
@@ -248,12 +257,13 @@ export function ChartingWorkspace() {
                 <span className="field-label">기록 분류</span>
                 <select
                   onChange={(event) => {
-                    setDraft((currentDraft) => ({
-                      ...currentDraft,
-                      category: event.target.value as NoteCategory,
-                    }))
+                    const category = event.target.value as NoteCategory
+
+                    setDraft(getInitialDraft(selectedPatient, category))
                     setSuggestionVisible(true)
                     setEvidenceExpanded(false)
+                    setFeedback('')
+                    setValidationErrors([])
                   }}
                   value={draft.category}
                 >
