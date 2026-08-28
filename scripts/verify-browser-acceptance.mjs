@@ -48,6 +48,16 @@ function delay(milliseconds) {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds))
 }
 
+function isLoopbackOrInlineUrl(rawUrl) {
+  const url = new URL(rawUrl)
+
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    return true
+  }
+
+  return ['127.0.0.1', '::1', '[::1]', 'localhost'].includes(url.hostname)
+}
+
 async function waitForPageTarget() {
   const deadline = Date.now() + 10000
 
@@ -252,8 +262,17 @@ async function saveScreenshot(client, fileName, fullPage = false) {
 
 const layoutExpression = `(() => {
   const rect = (selector) => {
-    const box = document.querySelector(selector).getBoundingClientRect()
-    return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, height: box.height }
+    const element = document.querySelector(selector)
+    const box = element.getBoundingClientRect()
+    return {
+      left: box.left,
+      right: box.right,
+      top: box.top,
+      bottom: box.bottom,
+      width: box.width,
+      height: box.height,
+      clientWidth: element.clientWidth,
+    }
   }
   const controls = [...document.querySelectorAll('button, input, select, textarea')].map((element) => {
     const box = element.getBoundingClientRect()
@@ -287,13 +306,34 @@ try {
   await client.send('Page.enable')
   await client.send('Runtime.enable')
   await client.send('Log.enable')
+  await client.send('Network.enable')
 
   const browserErrors = []
+  const requestsById = new Map()
+  const applicationRequests = []
+  const networkFailures = []
+  const nonLoopbackApplicationRequests = []
   client.on('Runtime.exceptionThrown', (params) => browserErrors.push(params.exceptionDetails.text))
   client.on('Log.entryAdded', ({ entry }) => {
     if (entry.level === 'error') {
       browserErrors.push({ source: entry.source, text: entry.text, url: entry.url ?? '' })
     }
+  })
+  client.on('Network.requestWillBeSent', ({ request, requestId, type }) => {
+    const requestRecord = { type, url: request.url }
+    requestsById.set(requestId, requestRecord)
+    applicationRequests.push(requestRecord)
+    if (!isLoopbackOrInlineUrl(request.url)) {
+      nonLoopbackApplicationRequests.push(requestRecord)
+    }
+  })
+  client.on('Network.loadingFailed', ({ canceled, errorText, requestId, type }) => {
+    networkFailures.push({
+      canceled,
+      errorText,
+      type,
+      url: requestsById.get(requestId)?.url ?? '',
+    })
   })
 
   await setViewport(client, 1440, 1024)
@@ -304,6 +344,11 @@ try {
   assert.equal(layout1440.patient.width, 288)
   assert.equal(layout1440.workspace.width, 816)
   assert.equal(layout1440.evidence.width, 336)
+  assert.equal(layout1440.composer.width, 720)
+  assert.equal(layout1440.patient.left, 0)
+  assert.equal(layout1440.patient.right, layout1440.workspace.left)
+  assert.equal(layout1440.workspace.right, layout1440.evidence.left)
+  assert.equal(layout1440.evidence.right, layout1440.document.clientWidth)
   assert(Math.abs(
     (layout1440.composer.left + layout1440.composer.width / 2) -
       (layout1440.workspace.left + layout1440.workspace.width / 2),
@@ -319,7 +364,34 @@ try {
   const clipped1366 = layout1366.controls.filter(
     (control) => control.left < 0 || control.right > layout1366.document.clientWidth,
   )
+  const expectedResponsiveComposerWidth = layout1366.workspace.clientWidth - 48
+  const responsiveWorkspaceCenter =
+    layout1366.workspace.left + layout1366.workspace.clientWidth / 2
+  const responsiveComposerCenter =
+    layout1366.composer.left + layout1366.composer.width / 2
 
+  assert.equal(layout1366.patient.width, 288)
+  assert.equal(layout1366.evidence.width, 336)
+  assert.equal(layout1366.workspace.width, 742)
+  assert.equal(layout1366.patient.left, 0)
+  assert.equal(layout1366.patient.right, layout1366.workspace.left)
+  assert.equal(layout1366.workspace.right, layout1366.evidence.left)
+  assert.equal(layout1366.evidence.right, layout1366.document.clientWidth)
+  assert.equal(layout1366.composer.width, expectedResponsiveComposerWidth)
+  assert.equal(layout1366.composer.left, layout1366.workspace.left + 24)
+  assert.equal(
+    layout1366.composer.right,
+    layout1366.workspace.left + layout1366.workspace.clientWidth - 24,
+  )
+  assert(
+    Math.abs(responsiveComposerCenter - responsiveWorkspaceCenter) <= 1,
+    'The responsive composer must be centered in the usable flexible workspace.',
+  )
+  assert(layout1366.composer.left >= layout1366.workspace.left)
+  assert(
+    layout1366.composer.right <=
+      layout1366.workspace.left + layout1366.workspace.clientWidth,
+  )
   assert(layout1366.document.scrollWidth <= layout1366.document.clientWidth)
   assert.deepEqual(clipped1366, [])
   findings.desktop1366 = { ...layout1366, clippedControls: clipped1366 }
@@ -476,12 +548,31 @@ try {
   await client.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'forced-colors', value: 'active' }],
   })
+  const forcedColorEditorFocus = await tabUntil(client, (focus) => focus.tag === 'TEXTAREA')
   const forcedColors = await evaluate(client, `(() => ({
     mediaMatches: matchMedia('(forced-colors: active)').matches,
     focusToken: getComputedStyle(document.documentElement).getPropertyValue('--color-focus-forced').trim(),
+    focusedElement: document.activeElement.tagName,
+    outlineColor: getComputedStyle(document.activeElement).outlineColor,
+    outlineStyle: getComputedStyle(document.activeElement).outlineStyle,
+    outlineWidth: getComputedStyle(document.activeElement).outlineWidth,
   }))()`)
-  findings.forcedColors = forcedColors
+  assert.equal(forcedColors.mediaMatches, true)
+  assert.equal(forcedColors.focusToken, 'Highlight')
+  assert.equal(forcedColors.focusedElement, 'TEXTAREA')
+  assert.notEqual(forcedColors.outlineStyle, 'none')
+  assert(Number.parseFloat(forcedColors.outlineWidth) > 0)
+  assert(!['rgba(0, 0, 0, 0)', 'transparent'].includes(forcedColors.outlineColor))
+  findings.forcedColors = { ...forcedColors, forcedColorEditorFocus }
 
+  assert.deepEqual(networkFailures, [])
+  assert.deepEqual(nonLoopbackApplicationRequests, [])
+  findings.network = {
+    applicationRequestCount: applicationRequests.length,
+    failures: networkFailures,
+    nonLoopbackApplicationRequests,
+    urls: [...new Set(applicationRequests.map((request) => request.url))],
+  }
   assert.deepEqual(browserErrors, [])
   findings.browserErrors = browserErrors
 

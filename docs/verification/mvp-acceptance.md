@@ -45,21 +45,23 @@ node scripts/verify-browser-acceptance.mjs
 
 The required in-app Browser workflow was attempted first with its bundled browser client, `getForUrl("http://127.0.0.1:4175/")`, and a complete-documentation request. Its persistent JavaScript runtime exited before browser selection on every attempt with `windows sandbox failed: helper_unknown_error: setup refresh had errors`; even a one-line health check failed. The installed Windows computer-control fallback used the same unavailable runtime.
 
-Acceptance therefore continued through the permitted standalone fallback. `scripts/verify-browser-acceptance.mjs` launches an installed local Chromium browser headlessly, connects through Chromium DevTools, inspects the real production page, injects native key events, checks browser-computed styles, captures screenshots, and fails on browser exceptions or network errors. `BROWSER_BIN` can override the detected Chrome/Edge executable.
+Acceptance therefore continued through the permitted standalone fallback. `scripts/verify-browser-acceptance.mjs` launches an installed local Chromium browser headlessly, connects through Chromium DevTools, inspects the real production page, injects native key events, checks browser-computed styles, captures screenshots, and fails on browser exceptions/log errors, any DevTools `Network.loadingFailed` event, or any HTTP(S) application request whose host is not loopback. Inline non-network URLs such as the browser-rendered time-input icon remain allowed. `BROWSER_BIN` can override the detected Chrome/Edge executable.
 
 Final browser result:
 
 ```text
 Browser acceptance verification passed.
 browserErrors: []
+network.failures: []
+network.nonLoopbackApplicationRequests: []
 ```
 
 ### Viewport findings
 
 | Viewport | Finding |
 |---|---|
-| 1440×1024 | Header was exactly 64px. Columns were exactly 288px / 816px / 336px. The 720px composer was centered in the workspace. Timeline began at y=642 and remained visible; the full evidence rail was visible. |
-| 1366×768 | Columns were 288px / 742px / 336px. Document width and client width were both 1366px. No core control extended outside the viewport; the independently scrollable rails/workspace remained usable. |
+| 1440×1024 | Asserted header exactly 64px; columns exactly 288px / 816px / 336px; composer exactly 720px and centered. Timeline began at y=642 and remained visible; the full evidence rail was visible. |
+| 1366×768 | Asserted columns exactly 288px / 742px / 336px, with touching boundaries and no overlap. The workspace had a 727px usable client width after its 15px vertical scrollbar; subtracting 24px responsive padding on each side produced the measured and asserted 679px composer. It was centered at x=651.5, stayed within the flexible column, and no core control or document content clipped horizontally. |
 | 390×844 narrow override | The page had no horizontal overflow after accounting for the vertical scrollbar (375px client and scroll widths). Full-page order was patient rail → SOAP workspace → evidence rail. Search, editor, evidence, draft save, record save, record add, and evidence expansion were present and within the content width. |
 
 Visual inspection found clear panel boundaries and hierarchy, readable clinical copy, balanced desktop density, intact header actions, and a coherent narrow flow. At 1366px the vertical scrollbars are visible by design because each desktop rail scrolls independently.
@@ -74,7 +76,8 @@ Visual inspection found clear panel boundaries and hierarchy, readable clinical 
 - Textual statuses included `안정`, `주의`, `즉시 검토`, `AI 제안`, and `연결됨`; state was not communicated by color alone.
 - The visible disclosure read `데모 환경 · 합성 데이터` and `제안은 확인·수정 후에만 간호기록에 반영됩니다.`
 - Chromium matched `prefers-reduced-motion: reduce`; editor and button transition durations computed to `1e-05s` (the `0.01ms` reduced-motion token).
-- Chromium also matched `forced-colors: active`; the configured focus color resolved to the system `Highlight` token. `npm run verify:css` separately confirmed the forced-colors focus rules and semantic focus tokens.
+- Chromium matched `forced-colors: active`; the focused editor remained a textarea with a computed `2px solid rgb(26, 235, 255)` outline, and the configured focus token remained the system color `Highlight`. The harness asserts the media match, system token, focused element, non-`none` outline style, positive width, and non-transparent color. `npm run verify:css` separately confirms the forced-colors focus rules and semantic focus tokens.
+- DevTools Network observed 33 application resource events across the acceptance navigations. All HTTP(S) requests used `127.0.0.1`; the only non-HTTP resource was an inline data URL used by Chromium for the time-input icon. Loading failures and non-loopback application requests were both empty and are asserted.
 
 ### Screenshots
 
