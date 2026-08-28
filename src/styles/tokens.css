@@ -27,6 +27,14 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --layout-app-header-height: 64px;
+  --layout-patient-rail-width: 288px;
+  --layout-evidence-rail-width: 336px;
+  --layout-workspace-content-width: 720px;
+  --layout-control-height: 40px;
 
   --radius-sm: 4px;
   --radius-md: 8px;
