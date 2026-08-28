@@ -8,6 +8,7 @@
   --color-surface-ai: #eaf5f8;
   --color-action-primary: #176b87;
   --color-border-focus: #2b7fff;
+  --color-focus-forced: Highlight;
   --color-border-default: #dce3ea;
   --color-border-strong: #bec9d4;
   --color-text-primary: #17202a;
@@ -45,7 +46,13 @@
   --line-height-heading: 24px;
 
   --stroke-default: 1px;
+  --focus-outline-width: 2px;
+  --focus-outline-offset: 2px;
   --shadow-focus: 0 0 0 3px rgb(43 127 255 / 28%);
+  --shadow-none: none;
+  --filter-interactive-hover: brightness(0.94);
+  --opacity-disabled: 0.5;
   --motion-duration-fast: 120ms;
   --motion-duration-reduced: 0.01ms;
+  --motion-easing-standard: ease;
 }

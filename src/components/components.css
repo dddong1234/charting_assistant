@@ -10,7 +10,7 @@
   line-height: var(--line-height-label);
   white-space: nowrap;
   cursor: pointer;
-  transition: filter var(--motion-duration-fast) ease;
+  transition: filter var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .ui-button--small {
@@ -33,18 +33,19 @@
 }
 
 .ui-button:hover:not(:disabled) {
-  filter: brightness(0.94);
+  filter: var(--filter-interactive-hover);
 }
 
 .ui-button:focus-visible,
 .patient-list-item:focus-visible {
-  outline: none;
+  outline: var(--focus-outline-width) solid var(--color-border-focus);
+  outline-offset: var(--focus-outline-offset);
   box-shadow: var(--shadow-focus);
 }
 
 .ui-button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: var(--opacity-disabled);
 }
 
 .status-chip {
@@ -100,8 +101,8 @@
   background: var(--color-surface-panel);
   text-align: left;
   cursor: pointer;
-  transition: border-color var(--motion-duration-fast) ease,
-    background-color var(--motion-duration-fast) ease;
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+    background-color var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .patient-list-item[data-selected='true'] {
@@ -223,5 +224,13 @@
   .ui-button,
   .patient-list-item {
     transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .ui-button:focus-visible,
+  .patient-list-item:focus-visible {
+    outline-color: var(--color-focus-forced);
+    box-shadow: var(--shadow-none);
   }
 }
