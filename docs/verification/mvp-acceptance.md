@@ -4,7 +4,7 @@ Verified on 2026-08-28 against the production Vite build on Windows with local C
 
 ## Result
 
-The MVP passes the automated quality gates, build-artifact verification, and local browser acceptance checks for the approved desktop hierarchy, the 1366px compatibility target, the narrow stacked workflow, keyboard-only authoring, focus visibility, textual safety/status communication, and reduced motion.
+The MVP passes the automated quality gates, build-artifact verification, and local browser acceptance checks for the approved desktop hierarchy, the 1366px compatibility target, the narrow stacked workflow, keyboard-only authoring, explicit suggestion provenance lifecycle, unsigned demo authorship, focus visibility, textual safety/status communication, and reduced motion.
 
 One browser defect was observed and fixed during acceptance: the undeclared site icon caused `/favicon.ico` to return 404. The real-browser check failed before the local SVG icon was declared and passed after rebuilding.
 
@@ -29,8 +29,8 @@ After `npm run build`:
 
 ```text
 dist/index.html                   0.47 kB
-dist/assets/index-DYPXXqqx.css   17.29 kB
-dist/assets/index-DTrxRa6A.js   209.57 kB
+dist/assets/index-BO2G5KB2.css   17.34 kB
+dist/assets/index-MILAF-m8.js   211.23 kB
 Build artifact verification passed: dist/index.html references 2 bundled assets.
 ```
 
@@ -69,11 +69,12 @@ Visual inspection found clear panel boundaries and hierarchy, readable clinical 
 ### Keyboard, focus, status, and safety findings
 
 - Starting from the page body, 17 plain `Tab` presses reached the unified narrative editor. The computed focus outline was `2px solid rgb(43, 127, 255)`.
-- Plain `Tab` in the focused editor accepted the active suggestion, added A/P text to the editable value, removed the pending suggestion, and retained editor focus.
-- `Escape` dismissed the suggestion without changing the narrative value or moving focus.
+- Plain `Tab` in the focused editor accepted the active suggestion, added A/P text to the editable value, removed the preview and keyboard-action group, retained editor focus, and changed both center and rail status to `AI 문장 채택됨`. The rail read `채택한 AI 문장 근거 기록 1개` and the linked record read `채택한 AI 문장 근거`, never “현재 자동완성”.
+- `Escape` dismissed the suggestion without changing the narrative value or moving focus. The preview, keyboard-action group, center/rail AI badges, evidence cards, and linkage labels were absent in the collapsed state; the rail explicitly read `활성 제안 없음`.
 - `Shift+Tab` moved from the editor to the category select while leaving the suggestion pending.
-- Keyboard navigation reached synthetic patient `1204-1`; `Enter` selected it and updated the patient context. After keyboard acceptance, a second `Tab` reached `기록 추가`, and `Enter` added the record. Feedback read `20:00 SOAP 간호기록 1건을 추가했습니다.` and the timeline reported two records.
-- Textual statuses included `안정`, `주의`, `즉시 검토`, `AI 제안`, and `연결됨`; state was not communicated by color alone.
+- Keyboard navigation reached synthetic patient `1204-1`; `Enter` selected it and updated the patient context. After keyboard acceptance, a second `Tab` reached `기록 추가`, and `Enter` added a new record at the same `20:00` timestamp as the fixture. The new card was first, read `데모 저장 · 서명 전`, contained `S: 수술 부위 당김감 경미하게 호소함.`, contained no bracketed review/TODO marker, and left the older `간호사 최○○ · 서명 완료` fixture second. Feedback read `20:00 SOAP 간호기록 1건을 추가했습니다.` and the timeline reported two records.
+- Evidence cards displayed their actual source-record state (`확인됨` or `최근`) independently. Integration coverage also expanded dismissed evidence and proved confirmed V/S, drain, and diet records did not become `확인 필요` merely because they were unlinked.
+- Textual statuses included `안정`, `주의`, `즉시 검토`, `AI 제안`, `AI 문장 채택됨`, source record state, and lifecycle-specific linkage copy; state was not communicated by color alone.
 - The visible disclosure read `데모 환경 · 합성 데이터` and `제안은 확인·수정 후에만 간호기록에 반영됩니다.`
 - Chromium matched `prefers-reduced-motion: reduce`; editor and button transition durations computed to `1e-05s` (the `0.01ms` reduced-motion token).
 - Chromium matched `forced-colors: active`; the focused editor remained a textarea with a computed `2px solid rgb(26, 235, 255)` outline, and the configured focus token remained the system color `Highlight`. The harness asserts the media match, system token, focused element, non-`none` outline style, positive width, and non-transparent color. `npm run verify:css` separately confirms the forced-colors focus rules and semantic focus tokens.
@@ -101,7 +102,7 @@ This full-page capture uses a 390×844 viewport override and records the complet
 npm run verify
 
 6 test files passed
-55 tests passed
+67 tests passed
 Component CSS verification passed.
 Production build passed.
 Build artifact verification passed: dist/index.html references 2 bundled assets.
@@ -116,8 +117,7 @@ The standalone follow-up `node scripts/verify-build.mjs` also passed with the sa
 - SBAR and physician documentation remain out of scope.
 - The narrow layout intentionally becomes a long single document so patient selection, workspace, timeline, and provenance stay available in source and reading order.
 - The in-app Browser and Windows computer-control runtimes were unavailable because their shared JavaScript sandbox failed before connection. Screenshots and interaction evidence came from the local Chromium fallback, not the in-app Browser surface.
-- Deferred minor test gap from Task 2: category-aware suggestion behavior has no dedicated `일반` category test, although the integrated workflow exercises an `일반` patient draft and suggestion.
-- Deferred minor test gap from Task 4: patient search has no dedicated bed-number interaction regression test, although the implemented query combines bed and synthetic patient name. These are test-coverage follow-ups, not observed acceptance failures.
+- The previously deferred minor gaps are covered: the domain suite includes a direct `일반` suggestion row, and the workspace suite searches the real patient rail by bed number.
 
 ## Vercel free-deployment steps (not executed)
 

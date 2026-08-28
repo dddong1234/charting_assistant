@@ -448,11 +448,24 @@ try {
   const accepted = await evaluate(client, `(() => ({
     value: document.querySelector('textarea').value,
     suggestionPresent: Boolean(document.querySelector('[aria-label="활성 AI 제안"]')),
+    keyboardActionsPresent: Boolean(document.querySelector('[aria-label="AI 제안 키보드 동작"]')),
+    composerStatuses: [...document.querySelectorAll('.note-composer .status-chip')]
+      .map((element) => element.innerText.trim()),
+    evidenceStatuses: [...document.querySelectorAll('.evidence-rail .status-chip')]
+      .map((element) => element.innerText.trim()),
+    evidenceSummary: document.querySelector('.evidence-rail > p')?.innerText ?? '',
+    linkageLabels: [...document.querySelectorAll('.evidence-item__linkage')]
+      .map((element) => element.innerText.trim()),
     focus: document.activeElement.tagName,
   }))()`)
   assert(accepted.value.includes('\nA:'))
   assert(accepted.value.includes('\nP:'))
   assert.equal(accepted.suggestionPresent, false)
+  assert.equal(accepted.keyboardActionsPresent, false)
+  assert.deepEqual(accepted.composerStatuses, ['AI 문장 채택됨'])
+  assert.deepEqual(accepted.evidenceStatuses, ['AI 문장 채택됨'])
+  assert.equal(accepted.evidenceSummary, '채택한 AI 문장 근거 기록 1개')
+  assert.deepEqual(accepted.linkageLabels, ['채택한 AI 문장 근거'])
   assert.equal(accepted.focus, 'TEXTAREA')
   findings.keyboardAccept = { editorFocus, focusStyle, accepted }
 
@@ -463,10 +476,24 @@ try {
   const dismissed = await evaluate(client, `(() => ({
     value: document.querySelector('textarea').value,
     suggestionPresent: Boolean(document.querySelector('[aria-label="활성 AI 제안"]')),
+    keyboardActionsPresent: Boolean(document.querySelector('[aria-label="AI 제안 키보드 동작"]')),
+    composerStatuses: [...document.querySelectorAll('.note-composer .status-chip')]
+      .map((element) => element.innerText.trim()),
+    evidenceStatuses: [...document.querySelectorAll('.evidence-rail .status-chip')]
+      .map((element) => element.innerText.trim()),
+    evidenceSummary: document.querySelector('.evidence-rail > p')?.innerText ?? '',
+    evidenceCount: document.querySelectorAll('.evidence-rail__list article').length,
+    linkageCount: document.querySelectorAll('.evidence-item__linkage').length,
     focus: document.activeElement.tagName,
   }))()`)
   assert.equal(dismissed.value, beforeDismiss)
   assert.equal(dismissed.suggestionPresent, false)
+  assert.equal(dismissed.keyboardActionsPresent, false)
+  assert.deepEqual(dismissed.composerStatuses, [])
+  assert.deepEqual(dismissed.evidenceStatuses, [])
+  assert.equal(dismissed.evidenceSummary, '활성 제안 없음')
+  assert.equal(dismissed.evidenceCount, 0)
+  assert.equal(dismissed.linkageCount, 0)
   assert.equal(dismissed.focus, 'TEXTAREA')
   findings.keyboardDismiss = dismissed
 
@@ -503,10 +530,19 @@ try {
     feedback: document.querySelector('[role="status"]')?.innerText ?? '',
     timelineCount: document.querySelector('.timeline__header span')?.innerText ?? '',
     articleCount: document.querySelectorAll('.timeline article').length,
+    firstArticle: document.querySelector('.timeline article')?.innerText ?? '',
+    firstNarrative: document.querySelector('.timeline article .nursing-note-card__narrative')?.innerText ?? '',
+    firstAccessibleName: document.querySelector('.timeline article')?.getAttribute('aria-label') ?? '',
+    secondArticle: document.querySelectorAll('.timeline article')[1]?.innerText ?? '',
   }))()`)
   assert(addedRecord.feedback.includes('SOAP 간호기록 1건을 추가했습니다.'))
   assert(addedRecord.timelineCount.includes('2건'))
   assert.equal(addedRecord.articleCount, 2)
+  assert.equal(addedRecord.firstAccessibleName, '20:00 일반 간호기록')
+  assert(addedRecord.firstArticle.includes('데모 저장 · 서명 전'))
+  assert(addedRecord.firstNarrative.includes('S: 수술 부위 당김감 경미하게 호소함.'))
+  assert(!/\[[^\]]*(?:확인 필요|TODO)[^\]]*\]/i.test(addedRecord.firstNarrative))
+  assert(addedRecord.secondArticle.includes('간호사 최○○ · 서명 완료'))
   findings.keyboardAddRecord = { patientFocus, selectedHeading, addButtonFocus, addedRecord }
 
   await navigate(client, 'accessibility-copy')

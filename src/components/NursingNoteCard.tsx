@@ -16,7 +16,11 @@ export function NursingNoteCard({ note }: NursingNoteCardProps) {
           <time className="nursing-note-card__time">{note.timestamp}</time>
           <span className="nursing-note-card__category">SOAP · {note.category}</span>
         </span>
-        <span className="nursing-note-card__signature">{note.nurseSignature} · 서명 완료</span>
+        <span className="nursing-note-card__signature">
+          {note.signatureState === 'unsigned-demo'
+            ? '데모 저장 · 서명 전'
+            : `${note.nurseSignature} · 서명 완료`}
+        </span>
       </header>
       <p className="nursing-note-card__narrative">{note.narrative}</p>
     </article>

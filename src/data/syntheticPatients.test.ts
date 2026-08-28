@@ -25,4 +25,12 @@ describe('syntheticPatients', () => {
       'kim-prn-2130',
     ]))
   })
+
+  it('provides explicit safe subjective text and signed status for every fixture record', () => {
+    const evidence = syntheticPatients.flatMap((patient) => patient.evidence)
+    const notes = syntheticPatients.flatMap((patient) => patient.notes)
+
+    expect(evidence.every((item) => item.subjective.trim() && !item.subjective.includes('['))).toBe(true)
+    expect(notes.every((note) => note.signatureState === 'signed-fixture')).toBe(true)
+  })
 })

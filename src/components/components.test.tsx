@@ -29,6 +29,7 @@ const evidence: Evidence = {
   category: 'V/S',
   label: '활력징후',
   detail: 'BP 118/72 · HR 78 · BT 36.8°C',
+  subjective: '특이 호소 없음.',
   state: '최근',
 }
 
@@ -39,6 +40,7 @@ const note: NursingNote = {
   narrative:
     'S: 잠이 안 온다고 호소함.\nO: 의식 명료하며 수면 어려움 호소함.\nA: 수면 어려움이 지속되는 상태로 사정함.\nP: 투약 후 효과 관찰 예정임.',
   nurseSignature: 'RN 김하늘',
+  signatureState: 'signed-fixture',
 }
 
 afterEach(cleanup)
@@ -64,7 +66,7 @@ describe('clinical UI components', () => {
     ['watch', '주의'],
     ['danger', '즉시 검토'],
     ['ai', 'AI 제안'],
-    ['linked', '연결됨'],
+    ['accepted', 'AI 문장 채택됨'],
   ] as const)('renders the %s status with visible Korean text', (tone, label) => {
     render(<StatusChip tone={tone} />)
 
@@ -84,14 +86,11 @@ describe('clinical UI components', () => {
     expect(onSelect).toHaveBeenCalledWith(patient.id)
   })
 
-  it.each([
-    [true, '연결됨'],
-    [false, '확인 필요'],
-  ] as const)('shows evidence provenance and linked/watch text when linked is %s', (linked, stateText) => {
+  it('shows source provenance and a separate label for suggestion linkage', () => {
     const { container } = render(
       <EvidenceItem
         evidence={evidence}
-        linked={linked}
+        linkageLabel="현재 자동완성 근거"
         provenance="간호기록 > Vital sign"
       />,
     )
@@ -101,7 +100,22 @@ describe('clinical UI components', () => {
     expect(within(item as HTMLElement).getByText('활력징후 · 14:20')).toBeVisible()
     expect(within(item as HTMLElement).getByText(evidence.detail)).toBeVisible()
     expect(within(item as HTMLElement).getByText('간호기록 > Vital sign')).toBeVisible()
-    expect(within(item as HTMLElement).getByText(stateText)).toBeVisible()
+    expect(within(item as HTMLElement).getByText('최근')).toBeVisible()
+    expect(within(item as HTMLElement).getByText('현재 자동완성 근거')).toBeVisible()
+  })
+
+  it('shows an unlinked evidence record source state without relabeling it as unsafe', () => {
+    const { container } = render(
+      <EvidenceItem
+        evidence={{ ...evidence, state: '확인됨' }}
+        provenance="간호기록 > Vital sign"
+      />,
+    )
+
+    const item = container.querySelector('.evidence-item') as HTMLElement
+    expect(within(item).getByText('확인됨')).toBeVisible()
+    expect(within(item).queryByText('확인 필요')).not.toBeInTheDocument()
+    expect(within(item).queryByText('현재 자동완성 근거')).not.toBeInTheDocument()
   })
 
   it.each([
@@ -122,5 +136,13 @@ describe('clinical UI components', () => {
     expect(within(card).getByText('RN 김하늘 · 서명 완료')).toBeVisible()
     expect(container.querySelectorAll('.nursing-note-card__narrative')).toHaveLength(1)
     expect(container.querySelector('.nursing-note-card__narrative')?.textContent).toBe(note.narrative)
+  })
+
+  it('labels a newly added demo note as saved but unsigned', () => {
+    render(<NursingNoteCard note={{ ...note, signatureState: 'unsigned-demo' }} />)
+
+    const card = screen.getByRole('article', { name: '21:30 PRN 간호기록' })
+    expect(within(card).getByText('데모 저장 · 서명 전')).toBeVisible()
+    expect(within(card).queryByText(/서명 완료/)).not.toBeInTheDocument()
   })
 })

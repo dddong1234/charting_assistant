@@ -8,6 +8,7 @@ export interface NursingNote {
   category: NoteCategory
   narrative: string
   nurseSignature: string
+  signatureState: 'signed-fixture' | 'unsigned-demo'
 }
 
 export interface Evidence {
@@ -16,6 +17,7 @@ export interface Evidence {
   category: NoteCategory
   label: string
   detail: string
+  subjective: string
   state: '확인됨' | '최근'
 }
 
@@ -48,6 +50,7 @@ export interface DraftValidation {
 
 const validTime = /^(?:[01]\d|2[0-3]):[0-5]\d$/
 const soapLabels = ['S', 'O', 'A', 'P'] as const
+const unresolvedReviewMarkerPattern = /\[[^\]\r\n]*(?:간호사\s*확인\s*필요|확인\s*필요|TODO)[^\]\r\n]*\]/i
 const unsafeSuggestionPattern = /진단|처방|오더|권고|diagnos|order|recommend|(?:용량|투여량|용법).*(?:증량|감량|변경|조절|필요)|(?:증량|감량|변경|조절).*(?:용량|투여량|용법)|(?:추가\s*)?검사\s*(?:필요|시행\s*필요|권고|요청|계획)|치료\s*(?:시작|변경|중단|필요|권고|계획)|(?:고위험|응급|중증|위급|불안정)\s*(?:상태|환자)?\s*(?:로|으로)?\s*(?:판단|결정|분류|평가)/i
 const factualEvidencePattern = /(?:\b(?:BP|PR|RR|BT|SpO₂)\b|NRS\s*\d+점|(?:PO|IV|IM|SC)\s*투약함|투약(?:함|\s*후)|섭취|배액|보행|호소(?:함|없음)|확인됨|관찰됨|침상|호흡|앉기|호출벨|양호|없음|안정)/i
 
@@ -61,7 +64,7 @@ export function parseTime(timestamp: string): number | null {
 }
 
 export function insertChronologically(notes: NursingNote[], newNote: NursingNote): NursingNote[] {
-  return [...notes, newNote].sort((left, right) => {
+  return [newNote, ...notes].sort((left, right) => {
     const rightTime = parseTime(right.timestamp)
     const leftTime = parseTime(left.timestamp)
 
@@ -77,7 +80,7 @@ export function insertChronologically(notes: NursingNote[], newNote: NursingNote
       return 1
     }
 
-    return left.id.localeCompare(right.id)
+    return 0
   })
 }
 
@@ -92,6 +95,12 @@ export function validateDraft(draft: Pick<NursingNote, 'timestamp' | 'narrative'
     errors.push('SOAP 간호기록을 입력하세요.')
   } else if (!hasOrderedSoapLines(draft.narrative)) {
     errors.push('S:, O:, A:, P:를 각각 줄 시작에 순서대로 입력하세요.')
+  } else if (!hasNonEmptySoapSectionBodies(draft.narrative)) {
+    errors.push('S:, O:, A:, P: 각 항목의 내용을 입력하세요.')
+  }
+
+  if (unresolvedReviewMarkerPattern.test(draft.narrative)) {
+    errors.push('대괄호로 남긴 간호사 확인 필요/TODO 표시를 해결하세요.')
   }
 
   return { valid: errors.length === 0, errors }
@@ -121,4 +130,15 @@ function isSafeFactualEvidence(detail: string): boolean {
 function hasOrderedSoapLines(narrative: string): boolean {
   const labels = Array.from(narrative.matchAll(/^([SOAP]):/gm), (match) => match[1])
   return soapLabels.every((label, index) => labels[index] === label)
+}
+
+function hasNonEmptySoapSectionBodies(narrative: string): boolean {
+  const sections = Array.from(
+    narrative.matchAll(/^([SOAP]):[^\S\r\n]*(.*)$/gm),
+    (match) => ({ body: match[2], label: match[1] }),
+  )
+
+  return soapLabels.every(
+    (label, index) => sections[index]?.label === label && sections[index].body.trim().length > 0,
+  )
 }

@@ -63,14 +63,14 @@
   white-space: nowrap;
 }
 
-.status-chip--ai {
+.status-chip--ai,
+.status-chip--accepted {
   color: var(--color-action-primary);
   background: var(--color-surface-ai);
   border-color: var(--color-action-primary);
 }
 
-.status-chip--watch,
-.status-chip--review {
+.status-chip--watch {
   color: var(--color-text-primary);
   background: var(--color-status-warning);
   border-color: var(--color-status-warning);
@@ -80,12 +80,6 @@
   color: var(--color-text-on-primary);
   background: var(--color-status-danger);
   border-color: var(--color-status-danger);
-}
-
-.status-chip--linked {
-  color: var(--color-text-on-primary);
-  background: var(--color-status-success);
-  border-color: var(--color-status-success);
 }
 
 .patient-list-item {
@@ -157,11 +151,12 @@
   background: var(--color-surface-panel);
 }
 
-.evidence-item[data-state='watch'] {
-  border-color: var(--color-status-warning);
+.evidence-item[data-linked='true'] {
+  border-color: var(--color-action-primary);
 }
 
 .evidence-item__detail,
+.evidence-item__linkage,
 .evidence-item__provenance,
 .nursing-note-card__narrative {
   margin: 0;
@@ -177,6 +172,13 @@
 .evidence-item__provenance,
 .nursing-note-card__signature {
   color: var(--color-text-muted);
+}
+
+.evidence-item__source-state,
+.evidence-item__linkage {
+  color: var(--color-action-primary);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
 }
 
 .keyboard-hint {

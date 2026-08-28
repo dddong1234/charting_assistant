@@ -1,7 +1,7 @@
 import type { PatientStatus } from '../domain/charting'
 import './components.css'
 
-export type StatusTone = PatientStatus | 'ai' | 'linked' | 'review'
+export type StatusTone = PatientStatus | 'ai' | 'accepted'
 
 interface StatusChipProps {
   tone: StatusTone
@@ -12,8 +12,7 @@ const statusLabels: Record<StatusTone, string> = {
   watch: '주의',
   danger: '즉시 검토',
   ai: 'AI 제안',
-  linked: '연결됨',
-  review: '확인 필요',
+  accepted: 'AI 문장 채택됨',
 }
 
 export function StatusChip({ tone }: StatusChipProps) {

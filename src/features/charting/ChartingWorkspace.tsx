@@ -22,6 +22,8 @@ interface PatientDraft {
   timestamp: string
 }
 
+type SuggestionLifecycle = 'none' | 'active' | 'accepted' | 'dismissed'
+
 function getInitialDraft(patient: Patient, category?: NoteCategory): PatientDraft {
   const selectedCategory = category ?? patient.evidence[0]?.category ?? '일반'
   const evidence = patient.evidence.find((item) => item.category === selectedCategory)
@@ -29,8 +31,8 @@ function getInitialDraft(patient: Patient, category?: NoteCategory): PatientDraf
   return {
     category: selectedCategory,
     narrative: evidence
-      ? `S: [간호사 확인 필요]\nO: ${evidence.detail}`
-      : 'S: [간호사 확인 필요]\nO: [객관적 차트 사실 확인 필요]',
+      ? `S: ${evidence.subjective}\nO: ${evidence.detail}`
+      : 'S: \nO: ',
     timestamp: evidence?.timestamp ?? '21:45',
   }
 }
@@ -40,7 +42,11 @@ export function ChartingWorkspace() {
   const [patientFilter, setPatientFilter] = useState<'all' | 'needs-review'>('all')
   const [selectedPatientId, setSelectedPatientId] = useState(syntheticPatients[0].id)
   const [draft, setDraft] = useState(() => getInitialDraft(syntheticPatients[0]))
-  const [suggestionVisible, setSuggestionVisible] = useState(true)
+  const [suggestionLifecycle, setSuggestionLifecycle] = useState<SuggestionLifecycle>(() =>
+    getSuggestion(getInitialDraft(syntheticPatients[0]).category, syntheticPatients[0].evidence)
+      ? 'active'
+      : 'none',
+  )
   const [evidenceExpanded, setEvidenceExpanded] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -52,15 +58,18 @@ export function ChartingWorkspace() {
     syntheticPatients.find((patient) => patient.id === selectedPatientId) ?? syntheticPatients[0]
   const selectedNotes = notesByPatient[selectedPatient.id] ?? []
   const suggestion = getSuggestion(draft.category, selectedPatient.evidence)
-  const soapCompletion = suggestion
-    ? `A: ${suggestion.completion}\nP: 상태 확인 결과를 간호사가 검토 후 기록함.`
+  const activeSuggestion = suggestionLifecycle === 'active' ? suggestion : null
+  const acceptedSuggestion = suggestionLifecycle === 'accepted' ? suggestion : null
+  const linkedSuggestion = activeSuggestion ?? acceptedSuggestion
+  const soapCompletion = activeSuggestion
+    ? `A: ${activeSuggestion.completion}\nP: 상태 확인 결과를 간호사가 검토 후 기록함.`
     : ''
-  const linkedEvidenceIds = new Set(suggestion?.evidenceIds ?? [])
+  const linkedEvidenceIds = new Set(linkedSuggestion?.evidenceIds ?? [])
   const visibleEvidence = evidenceExpanded
     ? selectedPatient.evidence
     : selectedPatient.evidence.filter((evidence) => linkedEvidenceIds.has(evidence.id))
   const editorDescription = [
-    suggestion && suggestionVisible ? 'active-soap-suggestion' : '',
+    activeSuggestion ? 'active-soap-suggestion' : '',
     validationErrors.length > 0 ? 'draft-validation-feedback' : '',
   ].filter(Boolean).join(' ') || undefined
   const visiblePatients = useMemo(() => {
@@ -90,16 +99,17 @@ export function ChartingWorkspace() {
     }
 
     setSelectedPatientId(patientId)
-    setDraft(getInitialDraft(patient))
-    setSuggestionVisible(true)
+    const nextDraft = getInitialDraft(patient)
+    setDraft(nextDraft)
+    setSuggestionLifecycle(getSuggestion(nextDraft.category, patient.evidence) ? 'active' : 'none')
     setEvidenceExpanded(false)
     setFeedback('')
     setValidationErrors([])
   }
 
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === 'Escape' && suggestion && suggestionVisible) {
-      setSuggestionVisible(false)
+    if (event.key === 'Escape' && activeSuggestion) {
+      setSuggestionLifecycle('dismissed')
       return
     }
 
@@ -109,8 +119,7 @@ export function ChartingWorkspace() {
       event.altKey ||
       event.ctrlKey ||
       event.metaKey ||
-      !suggestion ||
-      !suggestionVisible
+      !activeSuggestion
     ) {
       return
     }
@@ -120,7 +129,7 @@ export function ChartingWorkspace() {
       ...currentDraft,
       narrative: `${currentDraft.narrative}\n${soapCompletion}`,
     }))
-    setSuggestionVisible(false)
+    setSuggestionLifecycle('accepted')
   }
 
   function addNote() {
@@ -138,6 +147,7 @@ export function ChartingWorkspace() {
       category: draft.category,
       narrative: draft.narrative,
       nurseSignature: 'RN 김하늘',
+      signatureState: 'unsigned-demo',
     }
 
     setNotesByPatient((currentNotes) => ({
@@ -240,7 +250,8 @@ export function ChartingWorkspace() {
           <section className="note-composer" aria-labelledby="composer-title">
             <header className="note-composer__header">
               <h2 id="composer-title">새 SOAP 간호기록</h2>
-              <StatusChip tone="ai" />
+              {activeSuggestion ? <StatusChip tone="ai" /> : null}
+              {acceptedSuggestion ? <StatusChip tone="accepted" /> : null}
             </header>
             <div className="note-composer__metadata">
               <label>
@@ -259,8 +270,12 @@ export function ChartingWorkspace() {
                   onChange={(event) => {
                     const category = event.target.value as NoteCategory
 
-                    setDraft(getInitialDraft(selectedPatient, category))
-                    setSuggestionVisible(true)
+                    const nextDraft = getInitialDraft(selectedPatient, category)
+
+                    setDraft(nextDraft)
+                    setSuggestionLifecycle(
+                      getSuggestion(category, selectedPatient.evidence) ? 'active' : 'none',
+                    )
                     setEvidenceExpanded(false)
                     setFeedback('')
                     setValidationErrors([])
@@ -283,28 +298,32 @@ export function ChartingWorkspace() {
                 id={`narrative-${selectedPatient.id}`}
                 onChange={(event) => {
                   setDraft((currentDraft) => ({ ...currentDraft, narrative: event.target.value }))
-                  setSuggestionVisible(false)
+                  if (suggestionLifecycle === 'active') {
+                    setSuggestionLifecycle('dismissed')
+                  }
                 }}
                 onKeyDown={handleEditorKeyDown}
                 rows={5}
                 value={draft.narrative}
               />
-              {suggestion && suggestionVisible ? (
+              {activeSuggestion ? (
                 <div
                   aria-label="활성 AI 제안"
                   className="narrative-editor__suggestion"
                   id="active-soap-suggestion"
                 >
-                  <span>A: {suggestion.completion}</span>
+                  <span>A: {activeSuggestion.completion}</span>
                   <span>P: 상태 확인 결과를 간호사가 검토 후 기록함.</span>
                 </div>
               ) : null}
             </div>
             <div className="note-composer__footer">
-              <div className="note-composer__keyboard" aria-label="AI 제안 키보드 동작">
-                <KeyboardHint action="accept" />
-                <KeyboardHint action="dismiss" />
-              </div>
+              {activeSuggestion ? (
+                <div className="note-composer__keyboard" aria-label="AI 제안 키보드 동작">
+                  <KeyboardHint action="accept" />
+                  <KeyboardHint action="dismiss" />
+                </div>
+              ) : null}
               <Button onClick={addNote}>기록 추가</Button>
             </div>
             {validationErrors.length > 0 ? (
@@ -335,9 +354,16 @@ export function ChartingWorkspace() {
         <aside aria-label="제안 근거" className="evidence-rail">
           <header className="evidence-rail__header">
             <h2>제안 근거</h2>
-            <StatusChip tone="ai" />
+            {activeSuggestion ? <StatusChip tone="ai" /> : null}
+            {acceptedSuggestion ? <StatusChip tone="accepted" /> : null}
           </header>
-          <p>현재 자동완성 문장에 사용된 기록 {suggestion?.evidenceIds.length ?? 0}개</p>
+          <p>
+            {activeSuggestion
+              ? `현재 자동완성 근거 기록 ${activeSuggestion.evidenceIds.length}개`
+              : acceptedSuggestion
+                ? `채택한 AI 문장 근거 기록 ${acceptedSuggestion.evidenceIds.length}개`
+                : '활성 제안 없음'}
+          </p>
           <div className="safety-notice">
             <strong>데모 환경 · 합성 데이터</strong>
             <span>제안은 확인·수정 후에만 간호기록에 반영됩니다.</span>
@@ -347,7 +373,13 @@ export function ChartingWorkspace() {
               <EvidenceItem
                 evidence={evidence}
                 key={evidence.id}
-                linked={linkedEvidenceIds.has(evidence.id)}
+                linkageLabel={
+                  linkedEvidenceIds.has(evidence.id)
+                    ? activeSuggestion
+                      ? '현재 자동완성 근거'
+                      : '채택한 AI 문장 근거'
+                    : undefined
+                }
                 provenance={`간호기록 > ${evidence.label}`}
               />
             ))}
