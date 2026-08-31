@@ -20,6 +20,17 @@ describe('ChartingWorkspace', () => {
     expect(editor).not.toHaveValue(expect.stringContaining('[간호사 확인 필요]'))
   })
 
+  it('keeps the current PRN event out of the already-saved timeline', () => {
+    render(<ChartingWorkspace />)
+
+    const timeline = screen.getByRole('region', { name: '오늘 간호기록' })
+
+    expect(within(timeline).queryByText(/Stilnox 10mg PO 투약함/)).not.toBeInTheDocument()
+    expect(
+      within(timeline).getByRole('article', { name: '19:00 일반 간호기록' }),
+    ).toBeVisible()
+  })
+
   it('updates the patient context, timeline, draft, and evidence after search and selection', async () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)

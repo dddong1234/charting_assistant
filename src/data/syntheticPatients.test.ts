@@ -16,10 +16,12 @@ describe('syntheticPatients', () => {
       age: 68,
       postoperativeDay: 2,
     })
-    expect(selected?.notes).toEqual(expect.arrayContaining([
-      expect.objectContaining({ timestamp: '21:30', category: 'PRN' }),
-      expect.objectContaining({ timestamp: '14:00', category: 'V/S' }),
-    ]))
+    expect(
+      selected?.notes.map(({ timestamp, category }) => ({ timestamp, category })),
+    ).toEqual([
+      { timestamp: '19:00', category: '일반' },
+      { timestamp: '14:00', category: 'V/S' },
+    ])
     expect(selected?.evidence.map((item) => item.id)).toEqual(expect.arrayContaining([
       'kim-vs-1400',
       'kim-prn-2130',

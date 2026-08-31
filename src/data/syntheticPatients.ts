@@ -2,10 +2,10 @@ import type { NursingNote, Patient } from '../domain/charting'
 
 const kimNotes: NursingNote[] = [
   {
-    id: 'kim-note-2130',
-    timestamp: '21:30',
-    category: 'PRN',
-    narrative: 'S: “잠이 안 온다”고 호소함.\nO: BP 110/70 mmHg, HR 80회/분, RR 18회/분, BT 36.5℃, SpO₂ 98% 확인됨.\nA: 수면 불편 호소 상태를 간호사가 확인함.\nP: Dr. 박지훈 처방에 따라 Stilnox 10mg PO 투약함.',
+    id: 'kim-note-1900',
+    timestamp: '19:00',
+    category: '일반',
+    narrative: 'S: 연식 섭취 후 오심 및 복부 불편감 호소 없음.\nO: 연식 소량 섭취함.\nA: 식이 섭취 후 불편감 없이 관찰됨.\nP: 식이 섭취량 및 오심 여부 지속 관찰함.',
     nurseSignature: '간호사 이○○',
     signatureState: 'signed-fixture',
   },
