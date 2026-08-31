@@ -1,5 +1,23 @@
 # SOAP Charting Copilot MVP acceptance
 
+## 2026-08-31 input-grounded AI addendum
+
+The approved extension adds one server-side suggestion route while preserving the original deterministic experience. Automated coverage now verifies that the edited nurse text is posted after a 700 ms debounce, the immediate SOAP fallback stays visible during loading and failure, only the latest verified model result replaces it, and an inactive/missing key returns `missing-key` without breaking `Tab` acceptance.
+
+The public build remains synthetic-only. `OPENAI_API_KEY` is not configured in the repository and the model path therefore remains disabled until the deploy owner activates the key, sets it as a Vercel server environment variable, and applies project budget and rate-limit controls. `OPENAI_MODEL` defaults to `gpt-5-mini-2025-08-07` when omitted.
+
+Final extension verification:
+
+```text
+npm run verify
+
+12 test files passed
+96 tests passed
+Component CSS verification passed.
+Production build passed.
+Build artifact verification passed: dist/index.html references 2 bundled assets.
+```
+
 Verified on 2026-08-28 against the production Vite build on Windows with local Chromium. No deployment or other external publication was performed.
 
 ## Result

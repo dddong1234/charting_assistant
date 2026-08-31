@@ -43,6 +43,8 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 | FR-009 | Draft feedback | Draft-save and record-save actions return explicit, non-ambiguous feedback. |
 | FR-010 | Safety disclosure | The interface visibly states that it is a synthetic-data demo and suggestions require review. |
 | FR-011 | Guided demo | Every page load starts a skippable three-step guide for fact editing, evidence review, and explicit `Tab` acceptance. The guide does not block chart editing and can be restarted from the header. |
+| FR-012 | Input-grounded model upgrade | After a nurse edits a non-empty synthetic fact draft, the client requests a model suggestion using that current text and chart evidence. Only the latest server-validated result may replace the immediate deterministic suggestion. |
+| FR-013 | Resilient fallback | Missing/inactive API access, timeout, rate limit, network error, or rejected model output leaves the deterministic suggestion active and shows a textual fallback state. |
 
 ## Demo data and suggestion scope
 
@@ -50,15 +52,17 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 - Include V/S and general state, PRN medication administration, pain, drain, diet, and ambulation context.
 - Suggestions may summarize or continue supplied chart facts.
 - Suggestions must not invent diagnoses, orders, medication changes, or treatment plans.
-- The deterministic suggestion engine is a prototype substitute for a future model API and must be labeled as an AI demo suggestion in the UI.
+- A deterministic suggestion appears immediately. A server model may replace it only after evidence, token-grounding, and unsafe-language validation.
+- Model inference receives synthetic draft text, selected category, and minimized synthetic evidence only. It must be labeled separately from the deterministic fallback.
 
 ## Non-functional requirements
 
 - Desktop-first fidelity at 1440×1024, usable at 1366px width, and a coherent stacked layout on smaller screens.
 - Korean UI using Noto Sans KR with system fallbacks.
 - Visible focus styles, semantic landmarks, accessible labels, and reduced-motion support.
-- No backend, login, real patient data, remote model call, or persistent server storage.
-- Production build must be deployable as a static Vite site on Vercel’s free tier.
+- No login, real patient data, persistent server storage, analytics, or external integration other than the single suggestion route.
+- The OpenAI API key is server-only. Missing or inactive API access must not block the demo.
+- Production build must be deployable as a Vite site plus one Vercel Node function.
 
 ## Design system contract
 
@@ -83,7 +87,7 @@ These are validation hypotheses, not guaranteed outcomes:
 
 ## Out of scope
 
-- Real EMR integration, FHIR, authentication, audit signing, real PHI, production AI inference, voice capture, clinical decision support, automated orders, billing, or regulatory certification.
+- Real EMR integration, FHIR, authentication, audit signing, real PHI, production clinical deployment, voice capture, clinical decision support, automated orders, billing, or regulatory certification.
 - SBAR handoff generation is Phase 2.
 - Physician documentation is Phase 3.
 
@@ -92,6 +96,7 @@ These are validation hypotheses, not guaranteed outcomes:
 - Nurse-first: work repeats 24/7 across the ward and saved time can become direct care.
 - SOAP-first: the user clarified that one chronological nursing record follows SOAP; SBAR is not the primary record.
 - Fact-first input: the nurse supplies observations and performed care in familiar language; the system structures those supplied facts into one reviewable SOAP draft.
-- Deterministic demo suggestions: they prove the interaction and time-saving proposition without external cost, latency, or privacy exposure.
+- Hybrid suggestions: deterministic output protects the live demo; a validated server model proves that the current nurse input can change the proposed SOAP note.
+- Server-only model access: it keeps the key out of the browser and creates one validation boundary before generated text reaches the nurse.
 - Three-panel desktop layout: patient context, authoring, and evidence remain visible together, reducing navigation and provenance-check cost.
 - Auto-start guided demo: portfolio reviewers can discover the core interaction without instruction, while skip and restart controls preserve exploration and repeatable demonstrations.

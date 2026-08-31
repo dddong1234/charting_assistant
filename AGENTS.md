@@ -23,7 +23,8 @@ Build the smallest customer-demoable web MVP that helps three-shift general-surg
 - `src/data/` contains synthetic fixtures only.
 - `src/components/` contains focused presentational components.
 - `src/features/` owns interactive workflows and composes domain functions and components.
-- No network calls, backend, authentication, analytics vendor, or external AI API in the MVP.
+- The only allowed network path is `POST /api/suggest`, a server-side OpenAI suggestion route for synthetic demo facts. No persistent backend, authentication, analytics vendor, or other external integration is allowed.
+- The browser must never receive `OPENAI_API_KEY`; missing or inactive model access must preserve the deterministic fallback.
 - Use CSS custom properties from `src/styles/tokens.css`; do not scatter raw colors through component CSS.
 - User-visible clinical copy is Korean and should match the approved Figma language.
 
