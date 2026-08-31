@@ -60,6 +60,7 @@
   --focus-outline-width: 2px;
   --focus-outline-offset: 2px;
   --shadow-focus: 0 0 0 3px rgb(43 127 255 / 28%);
+  --shadow-overlay: 0 18px 48px rgb(11 35 57 / 24%);
   --shadow-none: none;
   --filter-interactive-hover: brightness(0.94);
   --opacity-disabled: 0.5;

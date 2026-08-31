@@ -23,6 +23,7 @@ interface PatientDraft {
 }
 
 type SuggestionLifecycle = 'none' | 'active' | 'accepted' | 'dismissed'
+type TourStep = 1 | 2 | 3 | null
 
 function getInitialDraft(patient: Patient, category?: NoteCategory): PatientDraft {
   const selectedCategory = category ?? patient.evidence[0]?.category ?? '일반'
@@ -67,6 +68,12 @@ function getUnifiedSoapDraft(patient: Patient, category: NoteCategory): string {
   return `S: ${subjective}\nO: ${objective}\nA: ${assessment}\nP: ${performedCare}`
 }
 
+function getInitialNotesByPatient(): Record<string, NursingNote[]> {
+  return Object.fromEntries(
+    syntheticPatients.map((patient) => [patient.id, patient.notes]),
+  )
+}
+
 export function ChartingWorkspace() {
   const [query, setQuery] = useState('')
   const [patientFilter, setPatientFilter] = useState<'all' | 'needs-review'>('all')
@@ -78,12 +85,13 @@ export function ChartingWorkspace() {
       : 'none',
   )
   const [evidenceExpanded, setEvidenceExpanded] = useState(false)
+  const [tourStep, setTourStep] = useState<TourStep>(1)
   const [feedback, setFeedback] = useState('')
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const editorRef = useRef<HTMLTextAreaElement>(null)
+  const evidenceRef = useRef<HTMLElement>(null)
   const validationRef = useRef<HTMLDivElement>(null)
-  const [notesByPatient, setNotesByPatient] = useState<Record<string, NursingNote[]>>(() =>
-    Object.fromEntries(syntheticPatients.map((patient) => [patient.id, patient.notes])),
-  )
+  const [notesByPatient, setNotesByPatient] = useState(getInitialNotesByPatient)
   const selectedPatient =
     syntheticPatients.find((patient) => patient.id === selectedPatientId) ?? syntheticPatients[0]
   const selectedNotes = notesByPatient[selectedPatient.id] ?? []
@@ -144,6 +152,28 @@ export function ChartingWorkspace() {
     }
   }, [validationErrors])
 
+  useEffect(() => {
+    if (tourStep === 2) {
+      evidenceRef.current?.scrollIntoView?.({ behavior: 'auto', block: 'start' })
+    }
+  }, [tourStep])
+
+  function restartTour() {
+    const demoPatient = syntheticPatients[0]
+    const nextDraft = getInitialDraft(demoPatient)
+
+    setSelectedPatientId(demoPatient.id)
+    setQuery('')
+    setPatientFilter('all')
+    setDraft(nextDraft)
+    setSuggestionLifecycle(getSuggestion(nextDraft.category, demoPatient.evidence) ? 'active' : 'none')
+    setEvidenceExpanded(false)
+    setNotesByPatient(getInitialNotesByPatient())
+    setFeedback('')
+    setValidationErrors([])
+    setTourStep(1)
+  }
+
   function selectPatient(patientId: Patient['id']) {
     const patient = syntheticPatients.find((candidate) => candidate.id === patientId)
 
@@ -183,6 +213,14 @@ export function ChartingWorkspace() {
       narrative: unifiedSoapDraft,
     }))
     setSuggestionLifecycle('accepted')
+    if (tourStep === 3) {
+      setTourStep(null)
+    }
+  }
+
+  function confirmEvidenceReview() {
+    setTourStep(suggestionLifecycle === 'accepted' ? null : 3)
+    editorRef.current?.focus()
   }
 
   function addNote() {
@@ -238,6 +276,9 @@ export function ChartingWorkspace() {
           <span>DAY · 07:00–15:00</span>
         </div>
         <div className="app-header__actions">
+          <button className="app-header__tour-button" onClick={restartTour} type="button">
+            체험 가이드
+          </button>
           <time dateTime="2026-08-28T14:42">2026.08.28 · 14:42</time>
           <span>RN 김은지 · 근무중</span>
         </div>
@@ -382,7 +423,10 @@ export function ChartingWorkspace() {
             <label className="visually-hidden" htmlFor={`narrative-${selectedPatient.id}`}>
               간호 사실 입력
             </label>
-            <div className="narrative-editor">
+            <div
+              className="narrative-editor"
+              data-tour-target={tourStep === 1 || tourStep === 3 ? 'true' : undefined}
+            >
               <textarea
                 aria-describedby={editorDescription}
                 aria-invalid={validationErrors.length > 0}
@@ -394,8 +438,12 @@ export function ChartingWorkspace() {
                   if (suggestionLifecycle !== 'accepted') {
                     setSuggestionLifecycle(nextNarrative.trim() && suggestion ? 'active' : 'none')
                   }
+                  if (tourStep === 1 && nextNarrative.trim()) {
+                    setTourStep(2)
+                  }
                 }}
                 onKeyDown={handleEditorKeyDown}
+                ref={editorRef}
                 rows={5}
                 value={draft.narrative}
               />
@@ -462,7 +510,12 @@ export function ChartingWorkspace() {
           </section>
         </main>
 
-        <aside aria-label="제안 근거" className="evidence-rail">
+        <aside
+          aria-label="제안 근거"
+          className="evidence-rail"
+          data-tour-target={tourStep === 2 ? 'true' : undefined}
+          ref={evidenceRef}
+        >
           <header className="evidence-rail__header">
             <h2>AI REVIEW</h2>
             {activeSuggestion ? <StatusChip tone="ai" /> : null}
@@ -534,6 +587,60 @@ export function ChartingWorkspace() {
           </footer>
         </aside>
       </div>
+      {tourStep ? (
+        <section
+          aria-label="체험 가이드"
+          aria-live="polite"
+          className="tour-card"
+          data-step={tourStep}
+        >
+          <div className="tour-card__path" aria-hidden="true">
+            {(['사실', '근거', '채택'] as const).map((label, index) => (
+              <span className={tourStep >= index + 1 ? 'is-current' : ''} key={label}>
+                {label}
+              </span>
+            ))}
+          </div>
+          <div className="tour-card__content">
+            <span className="tour-card__step">
+              GUIDED DEMO · <strong>{tourStep} / 3</strong>
+            </span>
+            {tourStep === 1 ? (
+              <>
+                <h2>간호 사실을 한 글자 수정해보세요</h2>
+                <p>백스페이스로 한 글자만 지워도 AI가 통합 SOAP 초안을 계속 제안합니다.</p>
+              </>
+            ) : null}
+            {tourStep === 2 ? (
+              <>
+                <h2>AI 초안과 근거를 확인하세요</h2>
+                <p>파란 테두리의 근거 3건이 통합 SOAP 문장의 출처입니다.</p>
+              </>
+            ) : null}
+            {tourStep === 3 ? (
+              <>
+                <h2>Tab으로 SOAP 초안을 채택하세요</h2>
+                <p>편집창을 클릭한 뒤 Tab을 누르면 하나의 SOAP 기록으로 들어옵니다.</p>
+              </>
+            ) : null}
+          </div>
+          <div className="tour-card__actions">
+            <button className="tour-card__skip" onClick={() => setTourStep(null)} type="button">
+              건너뛰기
+            </button>
+            {tourStep === 2 ? (
+              <button
+                className="tour-card__next"
+                onClick={confirmEvidenceReview}
+                type="button"
+              >
+                확인했어요
+              </button>
+            ) : null}
+            {tourStep === 3 ? <kbd>Tab</kbd> : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }

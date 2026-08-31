@@ -18,14 +18,15 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 
 ## Core flow
 
-1. Select one synthetic patient from the patient rail.
-2. Review the patient context and existing reverse-chronological SOAP notes.
-3. Choose the timestamp and note category.
-4. Enter observed, reported, and performed facts in familiar language without manually typing `S:`, `O:`, `A:`, or `P:`.
-5. Receive one inline unified SOAP draft grounded in the evidence panel.
-6. Accept with `Tab`, dismiss with `Escape`, or continue editing.
-7. Add the note and see it at the top of the timeline.
-8. Optionally save the current draft or mark the record set saved for the demo.
+1. On page load, optionally follow the non-blocking guided demo: edit one fact, review its evidence, then accept the unified SOAP draft with `Tab`.
+2. Select one synthetic patient from the patient rail.
+3. Review the patient context and existing reverse-chronological SOAP notes.
+4. Choose the timestamp and note category.
+5. Enter observed, reported, and performed facts in familiar language without manually typing `S:`, `O:`, `A:`, or `P:`.
+6. Receive one inline unified SOAP draft grounded in the evidence panel.
+7. Accept with `Tab`, dismiss with `Escape`, or continue editing.
+8. Add the note and see it at the top of the timeline.
+9. Optionally save the current draft or mark the record set saved for the demo.
 
 ## Functional requirements
 
@@ -41,6 +42,7 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 | FR-008 | Nurse control | The nurse can freely change accepted text before adding the record. |
 | FR-009 | Draft feedback | Draft-save and record-save actions return explicit, non-ambiguous feedback. |
 | FR-010 | Safety disclosure | The interface visibly states that it is a synthetic-data demo and suggestions require review. |
+| FR-011 | Guided demo | Every page load starts a skippable three-step guide for fact editing, evidence review, and explicit `Tab` acceptance. The guide does not block chart editing and can be restarted from the header. |
 
 ## Demo data and suggestion scope
 
@@ -92,3 +94,4 @@ These are validation hypotheses, not guaranteed outcomes:
 - Fact-first input: the nurse supplies observations and performed care in familiar language; the system structures those supplied facts into one reviewable SOAP draft.
 - Deterministic demo suggestions: they prove the interaction and time-saving proposition without external cost, latency, or privacy exposure.
 - Three-panel desktop layout: patient context, authoring, and evidence remain visible together, reducing navigation and provenance-check cost.
+- Auto-start guided demo: portfolio reviewers can discover the core interaction without instruction, while skip and restart controls preserve exploration and repeatable demonstrations.
