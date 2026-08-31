@@ -16,3 +16,4 @@ tools/
 .agents/runtime/
 
 .vercel
+.worktrees/
