@@ -9,7 +9,7 @@ The current demo keeps a deterministic SOAP suggestion visible while a nurse edi
 
 ## Goal
 
-Use the nurse's current synthetic fact text and the visible synthetic chart evidence to request one Korean SOAP nursing-note suggestion from a server-side model. Keep an immediate deterministic suggestion on screen and replace it only when the model result passes grounding and safety validation.
+Use the nurse's current synthetic fact text and the visible synthetic chart evidence to create one Korean SOAP nursing-note suggestion. A framework-free local interpreter handles common ward shorthand immediately; the server-side model is an optional upgrade. Replace the local result only when the model result passes grounding, semantic-conflict, and safety validation.
 
 ## Success criteria
 
@@ -32,6 +32,25 @@ Use the nurse's current synthetic fact text and the visible synthetic chart evid
 2. `src/services/suggestionClient.ts` posts a validated, minimal request to `/api/suggest`, applies a timeout, and returns a typed result. Network failures are reported to the feature layer rather than hidden.
 3. `api/suggest.ts` is a Vercel Node function. It validates the payload, applies a best-effort per-instance rate limit, calls the OpenAI Responses API with Structured Outputs, validates the returned sections, and returns either a verified model result or an explicit deterministic fallback.
 4. `ChartingWorkspace` immediately renders the deterministic suggestion, debounces model requests, aborts stale requests, and swaps in only the latest verified result.
+5. `src/domain/localFactInterpreter.ts` normalizes high-confidence Korean shorthand and detects current-versus-prior state conflicts without React, browser APIs, network access, or a machine-learning dependency.
+
+## API-free local interpretation extension
+
+The local path runs before the historical-evidence fallback:
+
+```text
+current nurse text
+→ whitespace and unit normalization
+→ concept/value/polarity match
+→ input-aware unified SOAP
+→ relevant historical evidence linkage
+→ current/prior conflict notice
+→ optional POST /api/suggest upgrade
+```
+
+The MVP lexicon covers positive/negative sleep, absent nausea, NRS pain scores from 0 to 10, drain volumes in `cc` or `mL`, ward ambulation shorthand, and absent dyspnea. It is intentionally small and deterministic. Detailed existing facts retain the richer evidence-grounded fallback; an unrecognized or unsafe current draft receives no recycled suggestion.
+
+Current nurse text represents the present charting moment. Existing evidence represents historical context. When their state differs, the current-input SOAP remains reviewable while a separate warning asks the nurse to confirm the state and timestamp. The warning is never part of the note value and therefore cannot be saved accidentally with `Tab`.
 
 The server call uses the official OpenAI JavaScript SDK, `store: false`, no tools, a pinned `gpt-5-mini-2025-08-07` default, and `OPENAI_API_KEY` from the server environment only. The browser bundle never receives the key.
 
@@ -72,13 +91,15 @@ The model returns structured `subjective`, `objective`, `assessment`, `plan`, an
 - Existing unsafe-language rules reject diagnoses, orders, treatment changes, and clinical recommendations.
 - The assessment is limited to a nurse-observed state; the plan is limited to care already performed or observation explicitly present in the supplied facts.
 - A rejected model response is never partially shown; the deterministic result remains active.
+- A model response that reverses a recognized current sleep polarity is rejected as `invalid-model-output`; the API returns the current-input local fallback instead.
 
 ## Interaction states
 
-- `규칙 기반 즉시 제안`: shown immediately and during local Vite development or any API failure.
-- `AI 분석 중`: shown while the existing deterministic suggestion remains usable.
+- `입력 기반 로컬 제안`: shown immediately for recognized shorthand.
+- `AI 분석 중 · 로컬 초안 유지`: shown while the current-input local result remains usable.
 - `입력 기반 AI 제안`: shown only after server validation succeeds.
-- `AI 연결 없음 · 규칙 기반 유지`: non-blocking status after a failed request.
+- `AI 연결 없음 · 로컬 제안 유지`: non-blocking status after a failed request for recognized input.
+- `규칙 기반 즉시 제안`: retained for detailed fixture text that already has safe, richer evidence mapping.
 
 The guided demo remains deterministic: a visitor can finish all three steps even if the server is slow or unavailable.
 
@@ -93,6 +114,7 @@ The guided demo remains deterministic: a visitor can finish all three steps even
 ## Validation
 
 - Domain unit tests cover fallback construction, request validation, unsupported evidence IDs, unsupported numeric/medication tokens, and unsafe text.
+- Local domain tests cover short positive/negative sleep, negation, pain-score extraction, unit normalization, ambulation, absent dyspnea, historical conflict detection, unsupported-input suppression, and current/model polarity conflict rejection.
 - API tests inject a fake generator and cover success, malformed input, missing key, rate limit, model error, and invalid output without contacting OpenAI.
 - UI tests mock only the HTTP boundary and cover loading, successful replacement, fallback retention, and stale-response cancellation.
 - `npm run verify` is the release gate.

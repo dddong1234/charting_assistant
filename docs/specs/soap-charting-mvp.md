@@ -45,6 +45,8 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 | FR-011 | Guided demo | Every page load starts a skippable three-step guide for fact editing, evidence review, and explicit `Tab` acceptance. The guide does not block chart editing and can be restarted from the header. |
 | FR-012 | Input-grounded model upgrade | After a nurse edits a non-empty synthetic fact draft, the client requests a model suggestion using that current text and chart evidence. Only the latest server-validated result may replace the immediate deterministic suggestion. |
 | FR-013 | Resilient fallback | Missing/inactive API access, timeout, rate limit, network error, or rejected model output leaves the deterministic suggestion active and shows a textual fallback state. |
+| FR-014 | API-free local fact interpretation | High-value Korean nursing shorthand (`잘잠`, `잠 못잠`, `오심 없음`, `통증 0–10점`, `배액 n cc/mL`, ward ambulation, and absent dyspnea) immediately changes the SOAP draft without a server call. Unsupported or unsafe current input must not recycle a contradictory prior note. |
+| FR-015 | Current/prior conflict notice | When a current fact conflicts with historical evidence, keep the current-input SOAP separate from a visible warning that names the conflict and asks the nurse to confirm state and record time. The warning is never inserted into the saved SOAP narrative. |
 
 ## Demo data and suggestion scope
 
@@ -53,6 +55,8 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 - Suggestions may summarize or continue supplied chart facts.
 - Suggestions must not invent diagnoses, orders, medication changes, or treatment plans.
 - A deterministic suggestion appears immediately. A server model may replace it only after evidence, token-grounding, and unsafe-language validation.
+- The local interpreter treats the nurse's current draft as the current-state source and chart evidence as historical context. It normalizes only recognized high-confidence shorthand; detailed source text keeps the richer evidence-grounded fallback.
+- A model result that semantically contradicts a recognized current sleep fact is rejected before rendering.
 - Model inference receives synthetic draft text, selected category, and minimized synthetic evidence only. It must be labeled separately from the deterministic fallback.
 
 ## Non-functional requirements
@@ -97,6 +101,8 @@ These are validation hypotheses, not guaranteed outcomes:
 - SOAP-first: the user clarified that one chronological nursing record follows SOAP; SBAR is not the primary record.
 - Fact-first input: the nurse supplies observations and performed care in familiar language; the system structures those supplied facts into one reviewable SOAP draft.
 - Hybrid suggestions: deterministic output protects the live demo; a validated server model proves that the current nurse input can change the proposed SOAP note.
+- Local-first semantics: the portfolio demo must react to common ward shorthand even with no API key. Unknown text hides the suggestion instead of presenting an unrelated historical statement with false confidence.
+- Current fact precedence: a current nurse observation describes the present charting moment; prior chart evidence provides context and may legitimately differ. The difference is shown as a review warning outside the note rather than silently overwritten or copied into SOAP.
 - Server-only model access: it keeps the key out of the browser and creates one validation boundary before generated text reaches the nurse.
 - Three-panel desktop layout: patient context, authoring, and evidence remain visible together, reducing navigation and provenance-check cost.
 - Auto-start guided demo: portfolio reviewers can discover the core interaction without instruction, while skip and restart controls preserve exploration and repeatable demonstrations.

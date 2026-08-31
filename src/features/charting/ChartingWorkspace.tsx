@@ -11,6 +11,7 @@ import {
   type AiSuggestionRequest,
   type AiSuggestionResult,
 } from '../../domain/aiSuggestion'
+import { interpretLocalNurseFacts } from '../../domain/localFactInterpreter'
 import {
   insertChronologically,
   validateDraft,
@@ -104,14 +105,24 @@ export function ChartingWorkspace({
   const acceptedSuggestion = suggestionLifecycle === 'accepted' ? suggestionResult : null
   const linkedSuggestion = activeSuggestion ?? acceptedSuggestion
   const unifiedSoapDraft = activeSuggestion?.narrative ?? ''
+  const localInterpretation = interpretLocalNurseFacts(
+    getAiSuggestionRequest(selectedPatient, draft),
+  )
+  const suggestionConflict = activeSuggestion ? localInterpretation?.conflict : undefined
   const aiStatusCopy =
     aiRequestStatus === 'loading'
-      ? 'AI 분석 중 · 규칙 기반 초안 유지'
+      ? localInterpretation
+        ? 'AI 분석 중 · 로컬 초안 유지'
+        : 'AI 분석 중 · 규칙 기반 초안 유지'
       : aiRequestStatus === 'model'
         ? '입력 기반 AI 제안'
         : aiRequestStatus === 'fallback'
-          ? 'AI 연결 없음 · 규칙 기반 유지'
-          : '규칙 기반 즉시 제안'
+          ? localInterpretation
+            ? 'AI 연결 없음 · 로컬 제안 유지'
+            : 'AI 연결 없음 · 규칙 기반 유지'
+          : localInterpretation
+            ? '입력 기반 로컬 제안'
+            : '규칙 기반 즉시 제안'
   const linkedEvidenceIds = new Set(linkedSuggestion?.evidenceIds ?? [])
   const visibleEvidence = evidenceExpanded
     ? selectedPatient.evidence
@@ -141,6 +152,7 @@ export function ChartingWorkspace({
       ]
   const editorDescription = [
     activeSuggestion ? 'active-soap-suggestion' : '',
+    suggestionConflict ? 'suggestion-conflict-warning' : '',
     validationErrors.length > 0 ? 'draft-validation-feedback' : '',
   ].filter(Boolean).join(' ') || undefined
   const visiblePatients = useMemo(() => {
@@ -524,6 +536,17 @@ export function ChartingWorkspace({
                   </div>
                   <span>{unifiedSoapDraft}</span>
                 </div>
+              ) : null}
+              {suggestionConflict ? (
+                <p
+                  aria-label="기록 충돌 확인"
+                  className="narrative-editor__conflict"
+                  id="suggestion-conflict-warning"
+                  role="status"
+                >
+                  <strong>이전 기록과 상태가 다름</strong>
+                  <span>{suggestionConflict.message}</span>
+                </p>
               ) : null}
             </div>
             <div className="note-composer__footer">

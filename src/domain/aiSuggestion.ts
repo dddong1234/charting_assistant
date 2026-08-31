@@ -1,4 +1,8 @@
 import type { Evidence, NoteCategory } from './charting.js'
+import {
+  doesNarrativeContradictLocalFacts,
+  interpretLocalNurseFacts,
+} from './localFactInterpreter.js'
 
 export type AiSuggestionEvidence = Pick<
     Evidence,
@@ -79,6 +83,23 @@ export function parseAiSuggestionRequest(value: unknown): ParsedAiSuggestionRequ
 export function buildFallbackSuggestion(
   request: AiSuggestionRequest,
 ): AiSuggestionResult | null {
+  if (unsafeSuggestionPattern.test(request.draftText)) {
+    return null
+  }
+
+  const localInterpretation = interpretLocalNurseFacts(request)
+  if (localInterpretation && localInterpretation.evidenceIds.length > 0) {
+    return {
+      source: 'fallback',
+      narrative: formatSoapNarrative(localInterpretation.sections),
+      evidenceIds: localInterpretation.evidenceIds,
+    }
+  }
+
+  if (!factualEvidencePattern.test(request.draftText)) {
+    return null
+  }
+
   const evidence = request.evidence.filter(
     (item) =>
       item.category === request.category &&
@@ -130,6 +151,13 @@ export function validateStructuredSuggestion(
     return {
       valid: false,
       unsupportedClaims: ['허용되지 않은 임상 판단 또는 지시 표현'],
+    }
+  }
+
+  if (doesNarrativeContradictLocalFacts(request.draftText, narrative)) {
+    return {
+      valid: false,
+      unsupportedClaims: ['모델 제안이 현재 간호사 입력과 상충함'],
     }
   }
 

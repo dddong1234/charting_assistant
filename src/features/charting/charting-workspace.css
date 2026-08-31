@@ -771,6 +771,23 @@
   font-size: 9px;
 }
 
+.narrative-editor__conflict {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 var(--space-3) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-status-warning);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+}
+
+.narrative-editor__conflict strong {
+  flex: 0 0 auto;
+  color: var(--color-status-warning);
+}
+
 .evidence-rail__summary {
   min-height: 106px;
   flex-wrap: wrap;

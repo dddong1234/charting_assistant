@@ -22,6 +22,28 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
     vi.useRealTimers()
   })
 
+  it('shows an immediate input-aware SOAP and a separate prior-record conflict warning', () => {
+    const requestSuggestion = vi.fn<RequestSuggestion>(
+      () => new Promise<AiSuggestionResult>(() => undefined),
+    )
+    render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)
+
+    fireEvent.change(screen.getByRole('textbox', { name: '간호 사실 입력' }), {
+      target: { value: '잘잠' },
+    })
+
+    expect(screen.getByText('AI 분석 중 · 로컬 초안 유지')).toBeVisible()
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(
+      'S: 잘 잤다고 말함.',
+    )
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).not.toHaveTextContent(
+      '잠이 안 온다',
+    )
+    expect(screen.getByRole('status', { name: '기록 충돌 확인' })).toHaveTextContent(
+      '현재 입력 “잘잠”이 이전 기록 “잠이 안 온다”와 다릅니다.',
+    )
+  })
+
   it('sends the edited nurse text after debounce while keeping the immediate fallback visible', async () => {
     const requestSuggestion = vi.fn<RequestSuggestion>(
       () => new Promise<AiSuggestionResult>(() => undefined),
@@ -31,9 +53,9 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
     const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
     fireEvent.change(editor, { target: { value: '잠이 오지 않는다고 다시 호소함.' } })
 
-    expect(screen.getByText('AI 분석 중 · 규칙 기반 초안 유지')).toBeVisible()
+    expect(screen.getByText('AI 분석 중 · 로컬 초안 유지')).toBeVisible()
     expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(
-      'S: “잠이 안 온다”고 호소함.',
+      'S: 잠을 자지 못했다고 호소함.',
     )
 
     await act(() => vi.advanceTimersByTimeAsync(700))
@@ -69,9 +91,9 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
     })
     await act(() => vi.advanceTimersByTimeAsync(700))
 
-    expect(screen.getByText('AI 연결 없음 · 규칙 기반 유지')).toBeVisible()
+    expect(screen.getByText('AI 연결 없음 · 로컬 제안 유지')).toBeVisible()
     expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(
-      'S: “잠이 안 온다”고 호소함.',
+      'S: 잠을 자지 못했다고 호소함.',
     )
   })
 
@@ -86,9 +108,9 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
     render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)
 
     const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
-    fireEvent.change(editor, { target: { value: '첫 번째 입력' } })
+    fireEvent.change(editor, { target: { value: '잠 못잠' } })
     await act(() => vi.advanceTimersByTimeAsync(700))
-    fireEvent.change(editor, { target: { value: '두 번째 입력' } })
+    fireEvent.change(editor, { target: { value: '잠이 오지 않는다고 다시 호소함.' } })
     await act(() => vi.advanceTimersByTimeAsync(700))
 
     const newest = {

@@ -1,5 +1,27 @@
 # SOAP Charting Copilot MVP acceptance
 
+## 2026-08-31 API-free local fact interpretation addendum
+
+The deterministic path now reads the current nurse draft before consulting historical evidence. With no API key, `잘잠`, `잠 못잠`, `오심 없음`, `통증 0–10점`, `배액 n cc/mL`, ward ambulation shorthand, and absent dyspnea immediately produce an input-aware unified SOAP draft. Unknown input and diagnosis/order language no longer recycle an unrelated prior suggestion.
+
+For the synthetic sleep scenario, `잘잠` produces `S: 잘 잤다고 말함.` and never places the prior `잠이 안 온다` statement inside the active SOAP suggestion. The prior/current difference remains visible in a separate accessible `기록 충돌 확인` status, and `aria-describedby` connects it to the editor. The warning is not part of the textarea value and cannot be accepted into SOAP with `Tab`.
+
+The optional server path now receives explicit temporal guidance that current nurse input is the current state and chart evidence is historical context. Domain validation rejects a model narrative that reverses a recognized current sleep polarity, so missing, inactive, or contradictory model output preserves the local result.
+
+Final extension verification:
+
+```text
+npm run verify
+
+13 test files passed
+108 tests passed
+Component CSS verification passed.
+Production build passed (43 modules transformed).
+Build artifact verification passed: dist/index.html references 2 bundled assets.
+```
+
+An in-app browser visual check was attempted against `http://127.0.0.1:4176/`, but the browser-control runtime exited during Windows sandbox initialization with `helper_unknown_error: setup refresh had errors`. No visual-pass claim is made for that unavailable run; DOM/accessibility integration tests, token-only CSS, TypeScript compilation, and the production build are the evidence for this addendum.
+
 ## 2026-08-31 input-grounded AI addendum
 
 The approved extension adds one server-side suggestion route while preserving the original deterministic experience. Automated coverage now verifies that the edited nurse text is posted after a 700 ms debounce, the immediate SOAP fallback stays visible during loading and failure, only the latest verified model result replaces it, and an inactive/missing key returns `missing-key` without breaking `Tab` acceptance.

@@ -55,6 +55,32 @@ describe('AI suggestion domain', () => {
     })
   })
 
+  it('uses a current positive sleep fact instead of repeating contradictory prior evidence', () => {
+    const suggestion = buildFallbackSuggestion({
+      ...request,
+      draftText: '잘잠',
+    })
+
+    expect(suggestion?.narrative).toBe(
+      'S: 잘 잤다고 말함.\nO: 수면 상태에 대한 현재 입력을 확인함.\nA: 수면 상태를 간호사가 확인함.\nP: 수면 및 안위 상태 변화를 이어서 관찰함.',
+    )
+    expect(suggestion?.narrative).not.toContain('잠이 안 온다')
+  })
+
+  it('does not offer a fallback for diagnosis or order language in the current draft', () => {
+    expect(buildFallbackSuggestion({
+      ...request,
+      draftText: '불면증 진단',
+    })).toBeNull()
+  })
+
+  it('does not recycle old evidence when the current draft cannot be interpreted', () => {
+    expect(buildFallbackSuggestion({
+      ...request,
+      draftText: 'asdf',
+    })).toBeNull()
+  })
+
   it('rejects a malformed request instead of forwarding it to a model', () => {
     expect(parseAiSuggestionRequest({ category: 'PRN', draftText: '', evidence: [] })).toEqual({
       ok: false,
@@ -71,6 +97,18 @@ describe('AI suggestion domain', () => {
           'S: “잠이 안 온다”고 호소함.\nO: BP 110/70 mmHg, HR 80회/분, RR 18회/분, BT 36.5℃, SpO₂ 98% 확인됨.\nA: 수면 불편 호소 상태를 간호사가 확인함.\nP: Stilnox 10mg PO 투약함.',
         evidenceIds: ['sleep-claim', 'vitals', 'medication'],
       },
+    })
+  })
+
+  it('rejects a model narrative that contradicts the current local sleep fact', () => {
+    const validation = validateStructuredSuggestion(
+      { ...request, draftText: '잘잠' },
+      groundedSections,
+    )
+
+    expect(validation).toEqual({
+      valid: false,
+      unsupportedClaims: ['모델 제안이 현재 간호사 입력과 상충함'],
     })
   })
 
