@@ -1,7 +1,7 @@
 # SOAP Nursing Note Copilot MVP Specification
 
 Status: Approved for development on 2026-08-28  
-Figma source: [Core Screen v3 / Chronological SOAP Nursing Notes](https://www.figma.com/design/KpybGW6Y8u9TyPSv61OcM9/?node-id=27-100)  
+Figma source: [Nurse EMR / Fact-first Unified SOAP](https://www.figma.com/design/KpybGW6Y8u9TyPSv61OcM9/?node-id=39-3)
 Product owner approval: `기획 최종 승인, 개발 시작`
 
 ## Problem
@@ -10,19 +10,19 @@ Three-shift ward nurses repeatedly re-check vital signs, pain scores, drains, me
 
 ## Target and job to be done
 
-The first user is a general-surgery ward nurse. While charting during a shift, the nurse wants the next safe SOAP sentence suggested from already available chart facts, so they can spend less time composing repetitive text without surrendering review or authorship.
+The first user is a general-surgery ward nurse. While charting during a shift, the nurse wants to enter observed and performed facts in familiar language and receive one evidence-grounded unified SOAP draft, so they can spend less time formatting repetitive text without surrendering review or authorship.
 
 ## Product promise
 
-In the same editor where the nurse writes a SOAP note, show a short, evidence-linked completion that can be accepted, dismissed, or edited. The result is saved as one chronological nursing note.
+In one editor, let the nurse enter ordinary clinical facts without manually typing SOAP labels, then show one evidence-linked unified SOAP draft that can be accepted, dismissed, or edited. The result is saved as one chronological nursing note only after explicit nurse action.
 
 ## Core flow
 
 1. Select one synthetic patient from the patient rail.
 2. Review the patient context and existing reverse-chronological SOAP notes.
 3. Choose the timestamp and note category.
-4. Type or edit one unified SOAP narrative.
-5. Receive an inline AI completion grounded in the evidence panel.
+4. Enter observed, reported, and performed facts in familiar language without manually typing `S:`, `O:`, `A:`, or `P:`.
+5. Receive one inline unified SOAP draft grounded in the evidence panel.
 6. Accept with `Tab`, dismiss with `Escape`, or continue editing.
 7. Add the note and see it at the top of the timeline.
 8. Optionally save the current draft or mark the record set saved for the demo.
@@ -33,7 +33,7 @@ In the same editor where the nurse writes a SOAP note, show a short, evidence-li
 |---|---|---|
 | FR-001 | Patient context | Selecting a patient updates header, notes, composer draft, and evidence without a page reload. |
 | FR-002 | Patient search and filter | Search matches bed or synthetic patient name; “확인 필요” shows only watch/danger patients. |
-| FR-003 | Unified SOAP editor | The composer uses one text-editing surface containing S/O/A/P lines. |
+| FR-003 | Fact-first unified SOAP editor | The composer uses one text-editing surface. The nurse may enter ordinary facts without SOAP labels; the proposed saved result is one continuous S/O/A/P narrative, never four independent fields. |
 | FR-004 | Inline suggestion | A visible suggestion is not part of the saved narrative until explicitly accepted. |
 | FR-005 | Keyboard control | While editing, `Tab` accepts and `Escape` dismisses the active suggestion. |
 | FR-006 | Evidence provenance | The evidence panel shows the records supporting the current suggestion and their state. |
@@ -89,6 +89,6 @@ These are validation hypotheses, not guaranteed outcomes:
 
 - Nurse-first: work repeats 24/7 across the ward and saved time can become direct care.
 - SOAP-first: the user clarified that one chronological nursing record follows SOAP; SBAR is not the primary record.
+- Fact-first input: the nurse supplies observations and performed care in familiar language; the system structures those supplied facts into one reviewable SOAP draft.
 - Deterministic demo suggestions: they prove the interaction and time-saving proposition without external cost, latency, or privacy exposure.
 - Three-panel desktop layout: patient context, authoring, and evidence remain visible together, reducing navigation and provenance-check cost.
-

@@ -18,7 +18,8 @@
 - `Tab` accepts and `Escape` dismisses only when the editor has an active suggestion.
 - Evidence supporting the current suggestion stays visible in the right panel.
 - Synthetic patient data only; no network requests, real PHI, diagnosis/order/treatment recommendation, or external model API.
-- Approved desktop structure and tokens come from Figma node `27:100`; responsive behavior must retain the same information hierarchy.
+- Approved desktop structure and tokens come from Figma node `39:3`; responsive behavior must retain the same information hierarchy.
+- The nurse enters ordinary observed and performed facts without manually typing SOAP labels; the accepted result remains one unified SOAP narrative.
 - Every behavior change follows RED → GREEN → REFACTOR and records commands/results in the task report.
 
 ---
@@ -129,4 +130,3 @@
 - Dependency order: executable harness → domain → components → integrated workflow → visual/deployment verification.
 - Placeholders: none; every task names exact files, behavior, commands, and commit subjects.
 - Scope control: no backend, real AI, EMR integration, SBAR generation, physician workflow, or analytics vendor is included.
-
