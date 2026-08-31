@@ -13,6 +13,7 @@
     "verify": "npm run lint && npm run verify:css && npm run test:run && npm run build && npm run verify:build"
   },
   "dependencies": {
+    "openai": "^7.8.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

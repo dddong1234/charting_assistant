@@ -1,10 +1,9 @@
 import type { Evidence, NoteCategory } from './charting'
 
-export interface AiSuggestionEvidence
-  extends Pick<
+export type AiSuggestionEvidence = Pick<
     Evidence,
     'id' | 'timestamp' | 'category' | 'label' | 'detail' | 'subjective' | 'factText'
-  > {}
+  >
 
 export interface AiSuggestionRequest {
   draftText: string
