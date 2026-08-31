@@ -108,6 +108,7 @@ describe('AI suggestion domain', () => {
     expect(isSafeModelDraft({ ...request, draftText: 'NRS 11점' })).toBe(false)
     expect(isSafeModelDraft({ ...request, draftText: '보행 예정' })).toBe(false)
     expect(isSafeModelDraft({ ...request, draftText: 'asdf' })).toBe(false)
+    expect(isSafeModelDraft({ ...request, draftText: '추가 처방 필요' })).toBe(false)
   })
 
   it('rejects a malformed request instead of forwarding it to a model', () => {
@@ -155,6 +156,21 @@ describe('AI suggestion domain', () => {
       unsupportedClaims: ['모델 제안이 현재 간호사 입력과 상충함'],
     })
   })
+
+  it.each(['숙면 못함', '수면 상태 양호하지 않음'])(
+    'accepts a correctly negative model narrative for negated sleep wording %s',
+    (draftText) => {
+      const validation = validateStructuredSuggestion(
+        { ...request, draftText },
+        {
+          ...groundedSections,
+          subjective: '잠을 자지 못했다고 호소함.',
+        },
+      )
+
+      expect(validation.valid).toBe(true)
+    },
+  )
 
   it('rejects an evidence id that was not supplied with the request', () => {
     const validation = validateStructuredSuggestion(request, {

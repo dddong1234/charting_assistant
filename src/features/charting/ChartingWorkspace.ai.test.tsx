@@ -112,6 +112,21 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
     )
   })
 
+  it('shows an explicit status when model-only input cannot reach the API', async () => {
+    const requestSuggestion = vi.fn<RequestSuggestion>().mockRejectedValue(new Error('offline'))
+    render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)
+
+    fireEvent.change(screen.getByRole('textbox', { name: '간호 사실 입력' }), {
+      target: { value: '기분이 편안하다고 말함' },
+    })
+    await act(() => vi.advanceTimersByTimeAsync(700))
+
+    expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'AI 제안 상태' })).toHaveTextContent(
+      'AI 연결 없음 · 현재 입력은 로컬 규칙으로 제안할 수 없습니다.',
+    )
+  })
+
   it('keeps the deterministic suggestion when the model route is unavailable', async () => {
     const requestSuggestion = vi.fn<RequestSuggestion>().mockRejectedValue(new Error('offline'))
     render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)

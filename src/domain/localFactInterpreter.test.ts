@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  analyzeLocalNurseFacts,
   CURRENT_DRAFT_EVIDENCE_ID,
   interpretLocalNurseFacts,
 } from './localFactInterpreter'
@@ -143,6 +144,19 @@ describe('local nurse fact interpreter', () => {
     expect(result?.evidenceIds).toEqual([CURRENT_DRAFT_EVIDENCE_ID])
     expect(result?.conflict?.evidenceIds).toEqual(['prior-pain-seven'])
   })
+
+  it.each(['NRS 100점', 'NRS 10.5점', 'NRS -1점'])(
+    'rejects malformed or out-of-range pain score %s',
+    (draftText) => {
+      const input = { category: 'PRN' as const, draftText, evidence }
+
+      expect(analyzeLocalNurseFacts(input)).toEqual({
+        status: 'invalid',
+        reason: 'out-of-range-pain',
+      })
+      expect(interpretLocalNurseFacts(input)).toBeNull()
+    },
+  )
 
   it('normalizes a drain amount from cc to mL', () => {
     const result = interpretLocalNurseFacts({

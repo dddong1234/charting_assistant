@@ -128,6 +128,13 @@ export function ChartingWorkspace({
           : localInterpretation
             ? '입력 기반 로컬 제안'
             : '규칙 기반 즉시 제안'
+  const modelOnlyStatusCopy = !activeSuggestion && draft.narrative.trim()
+    ? aiRequestStatus === 'loading'
+      ? 'AI 분석 중 · 현재 입력을 검증하고 있습니다.'
+      : aiRequestStatus === 'fallback'
+        ? 'AI 연결 없음 · 현재 입력은 로컬 규칙으로 제안할 수 없습니다.'
+        : null
+    : null
   const linkedEvidenceIds = new Set(linkedSuggestion?.evidenceIds ?? [])
   const conflictingEvidenceIds = new Set(suggestionConflict?.evidenceIds ?? [])
   const currentDraftEvidence: Evidence = {
@@ -176,6 +183,7 @@ export function ChartingWorkspace({
       ]
   const editorDescription = [
     activeSuggestion ? 'active-soap-suggestion' : '',
+    modelOnlyStatusCopy ? 'model-only-suggestion-status' : '',
     suggestionConflict ? 'suggestion-conflict-warning' : '',
     validationErrors.length > 0 ? 'draft-validation-feedback' : '',
   ].filter(Boolean).join(' ') || undefined
@@ -562,6 +570,16 @@ export function ChartingWorkspace({
                   </div>
                   <span>{unifiedSoapDraft}</span>
                 </div>
+              ) : null}
+              {modelOnlyStatusCopy ? (
+                <p
+                  aria-label="AI 제안 상태"
+                  className="narrative-editor__model-status"
+                  id="model-only-suggestion-status"
+                  role="status"
+                >
+                  {modelOnlyStatusCopy}
+                </p>
               ) : null}
               {suggestionConflict ? (
                 <p

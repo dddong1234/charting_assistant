@@ -44,7 +44,7 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 | FR-010 | Safety disclosure | The interface visibly states that it is a synthetic-data demo and suggestions require review. |
 | FR-011 | Guided demo | Every page load starts a skippable three-step guide for fact editing, evidence review, and explicit `Tab` acceptance. The guide does not block chart editing and can be restarted from the header. |
 | FR-012 | Input-grounded model upgrade | After a nurse edits a safe non-empty synthetic fact draft, the client may request a model suggestion using that current text and chart evidence. Only the latest server-validated result may replace a deterministic suggestion or activate a model-only suggestion. |
-| FR-013 | Resilient fallback | Missing/inactive API access, timeout, rate limit, network error, or rejected model output leaves the deterministic suggestion active and shows a textual fallback state. |
+| FR-013 | Resilient fallback | Missing/inactive API access, timeout, rate limit, network error, or rejected model output leaves any deterministic suggestion active and shows a textual fallback state. If no deterministic suggestion exists, the editor explicitly states that AI is unavailable and the local rules cannot propose a draft. |
 | FR-014 | API-free local fact interpretation | High-value Korean nursing shorthand (`잘잠`, `잠 못잠`, `오심 없음`, `통증 0–10점`, `배액 n cc/mL`, ward ambulation, and absent dyspnea) immediately changes the SOAP draft without a server call. Unsupported or unsafe current input must not recycle a contradictory prior note. |
 | FR-015 | Current/prior conflict notice | When a current fact conflicts with historical evidence, keep the current-input SOAP separate from a visible warning that names the conflict and asks the nurse to confirm state and record time. The warning is never inserted into the saved SOAP narrative. |
 
@@ -58,6 +58,7 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 - The local interpreter treats the nurse's current draft as the current-state source and chart evidence as historical context. It normalizes only recognized high-confidence shorthand; detailed source text keeps the richer evidence-grounded fallback.
 - A model result that semantically contradicts a recognized current sleep fact in either direction is rejected before rendering.
 - Safe Korean phrasing outside the local lexicon may use the optional model, but invalid values, planned care, non-Korean noise, diagnosis/order language, and other prohibited input never reach it.
+- NRS extraction accepts only a complete integer from 0 to 10; values such as `100`, `10.5`, and `-1` are invalid rather than truncated.
 - Model inference receives synthetic draft text, selected category, and minimized synthetic evidence only. It must be labeled separately from the deterministic fallback.
 
 ## Non-functional requirements

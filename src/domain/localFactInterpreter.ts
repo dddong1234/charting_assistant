@@ -49,7 +49,7 @@ type LocalFactSignal =
 const positiveSleepPattern = /(?:잘\s*(?:잠|잤)|숙면|수면\s*(?:상태\s*)?양호)/
 const negativeSleepPattern = /(?:잠(?:이|을)?[^.!?]*(?:안|못|오지\s*않)|숙면[^.!?]*(?:안|못|않)|수면[^.!?]*(?:어려|불량|양호[^.!?]*(?:않|아님|못))|불면)/
 const absentNauseaPattern = /(?:오심|메스꺼움|구역)(?:은|는|이|가)?\s*(?:없|안\s*함)/
-const painScorePattern = /(?:통증|NRS)(?:은|는|이|가|\s*점수)?\s*(\d{1,2})\s*(?:점)?/i
+const painScorePattern = /(?:통증|NRS)(?:은|는|이|가|\s*점수)?\s*(-?\d+(?:\.\d+)?)\s*(?:점)?(?![\d.])/i
 const drainAmountPattern = /배액(?:량)?\s*(\d+(?:\.\d+)?)\s*(?:cc|mL|ml)/i
 const ambulationPattern = /(?:복도[^.!?]*(?:한\s*바퀴|1\s*바퀴|보행|걸음)|보행[^.!?]*(?:시행|함|완료))/
 const unavailableAmbulationPattern = /(?:복도\s*)?보행[^.!?]*(?:못|안\s*함|하지\s*못|불가)/
@@ -120,7 +120,7 @@ export function interpretLocalNurseFacts(
     )
   }
 
-  if (painScore !== undefined && Number(painScore) <= 10) {
+  if (painScore !== undefined && isValidPainScore(painScore)) {
     return buildLocalInterpretation(
       input,
       normalizedDraft,
@@ -183,7 +183,7 @@ export function analyzeLocalNurseFacts(input: LocalFactInput): LocalFactAnalysis
   const normalizedDraft = input.draftText.replaceAll(/\s+/g, ' ').trim()
   const painScore = painScorePattern.exec(normalizedDraft)?.[1]
 
-  if (painScore !== undefined && Number(painScore) > 10) {
+  if (painScore !== undefined && !isValidPainScore(painScore)) {
     return { status: 'invalid', reason: 'out-of-range-pain' }
   }
 
@@ -201,12 +201,11 @@ export function doesNarrativeContradictLocalFacts(
   draftText: string,
   narrative: string,
 ): boolean {
-  const draftIsPositiveSleep = positiveSleepPattern.test(draftText)
-  const draftIsNegativeSleep = negativeSleepPattern.test(draftText)
+  const draftPolarity = sleepPolarity(draftText)
+  const narrativePolarity = sleepPolarity(narrative)
 
-  return (
-    (draftIsPositiveSleep && negativeSleepPattern.test(narrative)) ||
-    (draftIsNegativeSleep && positiveSleepPattern.test(narrative))
+  return Boolean(
+    draftPolarity && narrativePolarity && draftPolarity !== narrativePolarity,
   )
 }
 
@@ -255,13 +254,11 @@ function factSignalFromText(text: string): LocalFactSignal | null {
   if (ambulationPattern.test(text) && !plannedAmbulationPattern.test(text)) {
     return { kind: 'ambulation', value: 'completed' }
   }
-  if (negativeSleepPattern.test(text)) {
-    return { kind: 'sleep', value: 'negative' }
+  const sleepValue = sleepPolarity(text)
+  if (sleepValue) {
+    return { kind: 'sleep', value: sleepValue }
   }
-  if (positiveSleepPattern.test(text)) {
-    return { kind: 'sleep', value: 'positive' }
-  }
-  if (painScore !== undefined && Number(painScore) <= 10) {
+  if (painScore !== undefined && isValidPainScore(painScore)) {
     return { kind: 'pain', value: painScore }
   }
   if (drainAmount !== undefined) {
@@ -283,6 +280,19 @@ function signalsMatch(current: LocalFactSignal, prior: LocalFactSignal | null): 
 
 function signalsConflict(current: LocalFactSignal, prior: LocalFactSignal | null): boolean {
   return Boolean(prior && current.kind === prior.kind && current.value !== prior.value)
+}
+
+function sleepPolarity(text: string): 'positive' | 'negative' | null {
+  if (negativeSleepPattern.test(text)) {
+    return 'negative'
+  }
+
+  return positiveSleepPattern.test(text) ? 'positive' : null
+}
+
+function isValidPainScore(value: string): boolean {
+  const score = Number(value)
+  return Number.isInteger(score) && score >= 0 && score <= 10
 }
 
 function evidenceText(evidence: LocalFactEvidence): string {

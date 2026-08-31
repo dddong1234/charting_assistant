@@ -40,7 +40,7 @@ export type StructuredSuggestionValidation =
   | { valid: false; unsupportedClaims: string[] }
 
 const categories: NoteCategory[] = ['V/S', 'PRN', '일반']
-const unsafeSuggestionPattern = /진단|처방(?:을|이|함|하|되|변경|추가)|오더|권고|diagnos|order|recommend|(?:용량|투여량|용법).*(?:증량|감량|변경|조절|필요)|(?:증량|감량|변경|조절).*(?:용량|투여량|용법)|(?:추가\s*)?검사\s*(?:필요|시행\s*필요|권고|요청|계획)|치료\s*(?:시작|변경|중단|필요|권고|계획)|(?:고위험|응급|중증|위급|불안정)\s*(?:상태|환자)?\s*(?:로|으로)?\s*(?:판단|결정|분류|평가)/i
+const unsafeSuggestionPattern = /진단|(?:추가\s*)?처방\s*(?:필요|권고|요청|추가|변경|중단|시작)|처방(?:을|이|함|하|되|변경|추가)|오더|권고|diagnos|order|recommend|(?:용량|투여량|용법).*(?:증량|감량|변경|조절|필요)|(?:증량|감량|변경|조절).*(?:용량|투여량|용법)|(?:추가\s*)?검사\s*(?:필요|시행\s*필요|권고|요청|계획)|치료\s*(?:시작|변경|중단|필요|권고|계획)|(?:고위험|응급|중증|위급|불안정)\s*(?:상태|환자)?\s*(?:로|으로)?\s*(?:판단|결정|분류|평가)/i
 const factualEvidencePattern = /(?:\b(?:BP|PR|HR|RR|BT|SpO₂)\b|NRS\s*\d+점|(?:PO|IV|IM|SC)\s*투약함|투약(?:함|\s*후)|섭취|배액|보행|호소(?:함|없음)|확인됨|관찰됨|침상|호흡|앉기|호출벨|양호|없음|안정)/i
 const numberTokenPattern = /\d+(?:[./]\d+)*(?:\s?(?:mg|mL|mmHg|회\/분|점|%|℃))?/gi
 const latinTokenPattern = /\b[A-Za-z][A-Za-z0-9-]{2,}\b/g

@@ -30,6 +30,8 @@ This decision supports the existing benefit hypothesis—15 minutes saved per nu
 - Pattern coverage is deliberately narrow. Unsupported phrasing produces no local suggestion and depends on the optional server model for broader language handling.
 - Korean shorthand is ambiguous. The supported lexicon therefore stays limited to phrases with high-confidence polarity or values, and the result remains an unsigned suggestion.
 - Negation and intent are safety-critical. Negative sleep/ambulation phrases are checked before positive/completed patterns, `NRS` is constrained to 0–10, and planned ambulation is not converted into performed care.
+- Numeric parsing accepts only a complete integer NRS token from 0 through 10. Negative, decimal, and longer out-of-range values are invalid rather than truncated to a valid prefix.
+- Model-only input can fail without a local draft. The editor therefore exposes a textual loading state followed by an explicit connection/no-local-rule state instead of silently showing an empty preview.
 - A prior/current difference can be a legitimate state change, not an error. The UI labels it as a confirmation request rather than a clinical alert or diagnosis.
 - Regex and template behavior is not evidence of production clinical accuracy. Real deployment still requires governed data, nurse-led evaluation, auditability, privacy review, and integration validation.
 
@@ -39,6 +41,9 @@ This decision supports the existing benefit hypothesis—15 minutes saved per nu
 - Verify that `잘잠` never renders `잠이 안 온다` inside the active SOAP suggestion.
 - Verify sleep conflicts in both directions and verify that a different historical pain score is a conflict rather than support.
 - Verify that a safe unsupported Korean observation can reach a mocked model while `NRS 11점`, `보행 예정`, diagnosis/order language, and `asdf` cannot.
+- Verify that `추가 처방 필요` is blocked both before generation and after model output, while factual `처방 확인` wording remains available to the deterministic fixture.
+- Verify that `NRS 100점`, `NRS 10.5점`, and `NRS -1점` are invalid and never become `NRS 10점` or another local SOAP.
+- Verify that a model-only network failure renders a named accessible status in the editor.
 - Verify that the historical difference appears in a separate accessible `status` region and is referenced by the editor description.
 - Verify that a contradictory model response is rejected and the local fallback remains active.
 - Re-run Tab, Escape, evidence provenance, guided demo, timeline ordering, lint, build, and the complete `npm run verify` gate.

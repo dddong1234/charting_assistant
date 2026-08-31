@@ -52,7 +52,7 @@ The MVP lexicon covers positive/negative sleep, absent nausea, NRS pain scores f
 
 Current nurse text represents the present charting moment. Existing evidence represents historical context. The virtual evidence ID `current-draft` represents the editor text itself. Matching historical concept/value pairs may be supporting evidence; different values for the same concept are shown only as conflicts. When their state differs, the current-input SOAP remains reviewable while a separate warning asks the nurse to confirm the state and timestamp. The warning is never part of the note value and therefore cannot be saved accidentally with `Tab`.
 
-Safe Korean observations outside the deterministic lexicon may use the optional server model. The client does not invent a local SOAP while waiting. The server rejects out-of-range pain scores, planned ambulation, non-Korean noise, and prohibited diagnosis/order language before generation. Without an API key, that model-only input returns no suggestion rather than an unrelated historical fallback.
+Safe Korean observations outside the deterministic lexicon may use the optional server model. The client does not invent a local SOAP while waiting and renders explicit loading/failure text when there is no local fallback. The server rejects negative, decimal, or out-of-range NRS values, planned ambulation, non-Korean noise, and prohibited diagnosis/order language before generation. The same unsafe-language validation runs after generation; order-need phrasing such as `추가 처방 필요` is rejected while factual confirmation such as `처방 확인` remains allowed. Without an API key, model-only input returns no suggestion rather than an unrelated historical fallback.
 
 The server call uses the official OpenAI JavaScript SDK, `store: false`, no tools, a pinned `gpt-5-mini-2025-08-07` default, and `OPENAI_API_KEY` from the server environment only. The browser bundle never receives the key.
 
@@ -93,7 +93,7 @@ The model returns structured `subjective`, `objective`, `assessment`, `plan`, an
 - Existing unsafe-language rules reject diagnoses, orders, treatment changes, and clinical recommendations.
 - The assessment is limited to a nurse-observed state; the plan is limited to care already performed or observation explicitly present in the supplied facts.
 - A rejected model response is never partially shown; the deterministic result remains active.
-- A model response that reverses a recognized current sleep polarity is rejected as `invalid-model-output`; the API returns the current-input local fallback instead.
+- Sleep polarity uses one negative-first classifier for both local rendering and model validation. A model response that reverses a recognized current sleep polarity is rejected as `invalid-model-output`; a correctly negative response for `숙면 못함` or `수면 상태 양호하지 않음` is not falsely rejected.
 
 ## Interaction states
 
