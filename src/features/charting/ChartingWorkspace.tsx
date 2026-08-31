@@ -7,13 +7,18 @@ import { PatientListItem } from '../../components/PatientListItem'
 import { StatusChip } from '../../components/StatusChip'
 import { syntheticPatients } from '../../data/syntheticPatients'
 import {
-  getSuggestion,
+  buildFallbackSuggestion,
+  type AiSuggestionRequest,
+  type AiSuggestionResult,
+} from '../../domain/aiSuggestion'
+import {
   insertChronologically,
   validateDraft,
   type NoteCategory,
   type NursingNote,
   type Patient,
 } from '../../domain/charting'
+import { requestAiSuggestion } from '../../services/suggestionClient'
 import './charting-workspace.css'
 
 interface PatientDraft {
@@ -23,7 +28,12 @@ interface PatientDraft {
 }
 
 type SuggestionLifecycle = 'none' | 'active' | 'accepted' | 'dismissed'
+type AiRequestStatus = 'idle' | 'loading' | 'model' | 'fallback'
 type TourStep = 1 | 2 | 3 | null
+
+interface ChartingWorkspaceProps {
+  requestSuggestion?: typeof requestAiSuggestion
+}
 
 function getInitialDraft(patient: Patient, category?: NoteCategory): PatientDraft {
   const selectedCategory = category ?? patient.evidence[0]?.category ?? '일반'
@@ -38,34 +48,20 @@ function getInitialDraft(patient: Patient, category?: NoteCategory): PatientDraf
   }
 }
 
-function getUnifiedSoapDraft(patient: Patient, category: NoteCategory): string {
-  const suggestion = getSuggestion(category, patient.evidence)
-
-  if (!suggestion) {
-    return ''
+function getAiSuggestionRequest(patient: Patient, draft: PatientDraft): AiSuggestionRequest {
+  return {
+    category: draft.category,
+    draftText: draft.narrative,
+    evidence: patient.evidence.map((item) => ({
+      id: item.id,
+      timestamp: item.timestamp,
+      category: item.category,
+      label: item.label,
+      detail: item.detail,
+      subjective: item.subjective,
+      ...(item.factText ? { factText: item.factText } : {}),
+    })),
   }
-
-  const evidence = patient.evidence.filter((item) =>
-    suggestion.evidenceIds.includes(item.id),
-  )
-  const subjective = evidence[0]?.subjective ?? '특이 호소 없음.'
-  const objective =
-    evidence.find((item) => item.label.includes('V/S'))?.detail ??
-    evidence[0]?.detail ??
-    '관찰 사실을 확인함.'
-  const assessment = subjective.includes('잠')
-    ? '수면 불편 호소 상태를 간호사가 확인함.'
-    : category === 'V/S'
-      ? '활력징후 상태를 간호사가 확인함.'
-      : '현재 상태를 간호사가 확인함.'
-  const medicationEvidence = evidence.find((item) => item.label.includes('투약'))
-  const performedCare = medicationEvidence
-    ? medicationEvidence.label.includes('Dr. 박지훈 처방')
-      ? `Dr. 박지훈 처방에 따라 ${medicationEvidence.detail}`
-      : medicationEvidence.detail
-    : '상태 변화 여부를 이어서 관찰함.'
-
-  return `S: ${subjective}\nO: ${objective}\nA: ${assessment}\nP: ${performedCare}`
 }
 
 function getInitialNotesByPatient(): Record<string, NursingNote[]> {
@@ -74,16 +70,25 @@ function getInitialNotesByPatient(): Record<string, NursingNote[]> {
   )
 }
 
-export function ChartingWorkspace() {
+export function ChartingWorkspace({
+  requestSuggestion = requestAiSuggestion,
+}: ChartingWorkspaceProps = {}) {
+  const initialDraft = getInitialDraft(syntheticPatients[0])
+  const initialSuggestion = buildFallbackSuggestion(
+    getAiSuggestionRequest(syntheticPatients[0], initialDraft),
+  )
   const [query, setQuery] = useState('')
   const [patientFilter, setPatientFilter] = useState<'all' | 'needs-review'>('all')
   const [selectedPatientId, setSelectedPatientId] = useState(syntheticPatients[0].id)
-  const [draft, setDraft] = useState(() => getInitialDraft(syntheticPatients[0]))
+  const [draft, setDraft] = useState(initialDraft)
   const [suggestionLifecycle, setSuggestionLifecycle] = useState<SuggestionLifecycle>(() =>
-    getSuggestion(getInitialDraft(syntheticPatients[0]).category, syntheticPatients[0].evidence)
-      ? 'active'
-      : 'none',
+    initialSuggestion ? 'active' : 'none',
   )
+  const [suggestionResult, setSuggestionResult] = useState<AiSuggestionResult | null>(
+    initialSuggestion,
+  )
+  const [aiRequestStatus, setAiRequestStatus] = useState<AiRequestStatus>('idle')
+  const [shouldRequestAi, setShouldRequestAi] = useState(false)
   const [evidenceExpanded, setEvidenceExpanded] = useState(false)
   const [tourStep, setTourStep] = useState<TourStep>(1)
   const [feedback, setFeedback] = useState('')
@@ -95,13 +100,18 @@ export function ChartingWorkspace() {
   const selectedPatient =
     syntheticPatients.find((patient) => patient.id === selectedPatientId) ?? syntheticPatients[0]
   const selectedNotes = notesByPatient[selectedPatient.id] ?? []
-  const suggestion = getSuggestion(draft.category, selectedPatient.evidence)
-  const activeSuggestion = suggestionLifecycle === 'active' ? suggestion : null
-  const acceptedSuggestion = suggestionLifecycle === 'accepted' ? suggestion : null
+  const activeSuggestion = suggestionLifecycle === 'active' ? suggestionResult : null
+  const acceptedSuggestion = suggestionLifecycle === 'accepted' ? suggestionResult : null
   const linkedSuggestion = activeSuggestion ?? acceptedSuggestion
-  const unifiedSoapDraft = activeSuggestion
-    ? getUnifiedSoapDraft(selectedPatient, draft.category)
-    : ''
+  const unifiedSoapDraft = activeSuggestion?.narrative ?? ''
+  const aiStatusCopy =
+    aiRequestStatus === 'loading'
+      ? 'AI 분석 중 · 규칙 기반 초안 유지'
+      : aiRequestStatus === 'model'
+        ? '입력 기반 AI 제안'
+        : aiRequestStatus === 'fallback'
+          ? 'AI 연결 없음 · 규칙 기반 유지'
+          : '규칙 기반 즉시 제안'
   const linkedEvidenceIds = new Set(linkedSuggestion?.evidenceIds ?? [])
   const visibleEvidence = evidenceExpanded
     ? selectedPatient.evidence
@@ -158,6 +168,59 @@ export function ChartingWorkspace() {
     }
   }, [tourStep])
 
+  useEffect(() => {
+    const fallback = buildFallbackSuggestion(getAiSuggestionRequest(selectedPatient, draft))
+    if (!shouldRequestAi || !draft.narrative.trim() || !fallback) {
+      return
+    }
+
+    const controller = new AbortController()
+    let cancelled = false
+    const request = getAiSuggestionRequest(selectedPatient, draft)
+    const timer = window.setTimeout(() => {
+      void requestSuggestion(request, { signal: controller.signal })
+        .then((result) => {
+          if (cancelled) {
+            return
+          }
+
+          setSuggestionResult(result)
+          setAiRequestStatus(result.source === 'model' ? 'model' : 'fallback')
+        })
+        .catch((error: unknown) => {
+          if (cancelled || (error instanceof DOMException && error.name === 'AbortError')) {
+            return
+          }
+
+          setAiRequestStatus('fallback')
+        })
+    }, 700)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [
+    draft,
+    requestSuggestion,
+    selectedPatient,
+    shouldRequestAi,
+  ])
+
+  function activateSuggestion(
+    patient: Patient,
+    nextDraft: PatientDraft,
+    requestModel: boolean,
+  ) {
+    const fallback = buildFallbackSuggestion(getAiSuggestionRequest(patient, nextDraft))
+
+    setSuggestionResult(fallback)
+    setSuggestionLifecycle(nextDraft.narrative.trim() && fallback ? 'active' : 'none')
+    setShouldRequestAi(requestModel && Boolean(fallback) && Boolean(nextDraft.narrative.trim()))
+    setAiRequestStatus(requestModel && fallback ? 'loading' : 'idle')
+  }
+
   function restartTour() {
     const demoPatient = syntheticPatients[0]
     const nextDraft = getInitialDraft(demoPatient)
@@ -166,7 +229,7 @@ export function ChartingWorkspace() {
     setQuery('')
     setPatientFilter('all')
     setDraft(nextDraft)
-    setSuggestionLifecycle(getSuggestion(nextDraft.category, demoPatient.evidence) ? 'active' : 'none')
+    activateSuggestion(demoPatient, nextDraft, false)
     setEvidenceExpanded(false)
     setNotesByPatient(getInitialNotesByPatient())
     setFeedback('')
@@ -184,7 +247,7 @@ export function ChartingWorkspace() {
     setSelectedPatientId(patientId)
     const nextDraft = getInitialDraft(patient)
     setDraft(nextDraft)
-    setSuggestionLifecycle(getSuggestion(nextDraft.category, patient.evidence) ? 'active' : 'none')
+    activateSuggestion(patient, nextDraft, false)
     setEvidenceExpanded(false)
     setFeedback('')
     setValidationErrors([])
@@ -193,6 +256,7 @@ export function ChartingWorkspace() {
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Escape' && activeSuggestion) {
       setSuggestionLifecycle('dismissed')
+      setShouldRequestAi(false)
       return
     }
 
@@ -213,6 +277,7 @@ export function ChartingWorkspace() {
       narrative: unifiedSoapDraft,
     }))
     setSuggestionLifecycle('accepted')
+    setShouldRequestAi(false)
     if (tourStep === 3) {
       setTourStep(null)
     }
@@ -405,9 +470,7 @@ export function ChartingWorkspace() {
                     const nextDraft = getInitialDraft(selectedPatient, category)
 
                     setDraft(nextDraft)
-                    setSuggestionLifecycle(
-                      getSuggestion(category, selectedPatient.evidence) ? 'active' : 'none',
-                    )
+                    activateSuggestion(selectedPatient, nextDraft, false)
                     setEvidenceExpanded(false)
                     setFeedback('')
                     setValidationErrors([])
@@ -433,11 +496,10 @@ export function ChartingWorkspace() {
                 id={`narrative-${selectedPatient.id}`}
                 onChange={(event) => {
                   const nextNarrative = event.target.value
+                  const nextDraft = { ...draft, narrative: nextNarrative }
 
-                  setDraft((currentDraft) => ({ ...currentDraft, narrative: nextNarrative }))
-                  if (suggestionLifecycle !== 'accepted') {
-                    setSuggestionLifecycle(nextNarrative.trim() && suggestion ? 'active' : 'none')
-                  }
+                  setDraft(nextDraft)
+                  activateSuggestion(selectedPatient, nextDraft, true)
                   if (tourStep === 1 && nextNarrative.trim()) {
                     setTourStep(2)
                   }
@@ -455,7 +517,10 @@ export function ChartingWorkspace() {
                 >
                   <div className="narrative-editor__suggestion-header">
                     <strong>AI · 통합 SOAP 초안</strong>
-                    <span>입력 사실·근거 {activeSuggestion.evidenceIds.length}건</span>
+                    <div className="narrative-editor__suggestion-meta">
+                      <span aria-live="polite">{aiStatusCopy}</span>
+                      <small>입력 사실·근거 {activeSuggestion.evidenceIds.length}건</small>
+                    </div>
                   </div>
                   <span>{unifiedSoapDraft}</span>
                 </div>
@@ -470,7 +535,10 @@ export function ChartingWorkspace() {
               ) : null}
               <div className="note-composer__actions">
                 <Button
-                  onClick={() => setSuggestionLifecycle('dismissed')}
+                  onClick={() => {
+                    setSuggestionLifecycle('dismissed')
+                    setShouldRequestAi(false)
+                  }}
                   size="medium"
                   variant="secondary"
                 >
@@ -583,6 +651,7 @@ export function ChartingWorkspace() {
           </section>
           <footer className="evidence-rail__footer">
             <strong>SYNTHETIC DATA · PORTFOLIO DEMO</strong>
+            <span>실환자 정보 입력 금지 · 합성 데이터 전용</span>
             <span>AI는 기록을 대신 서명하지 않습니다. 최종 판단과 서명은 담당 간호사에게 있습니다.</span>
           </footer>
         </aside>

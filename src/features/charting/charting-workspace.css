@@ -758,6 +758,19 @@
   line-height: 14px;
 }
 
+.narrative-editor__suggestion-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+.narrative-editor__suggestion-meta small {
+  color: var(--color-text-muted);
+  font-size: 9px;
+}
+
 .evidence-rail__summary {
   min-height: 106px;
   flex-wrap: wrap;
