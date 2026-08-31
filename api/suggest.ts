@@ -5,7 +5,7 @@ import {
   validateStructuredSuggestion,
   type AiSuggestionRequest,
   type AiSuggestionResult,
-} from '../src/domain/aiSuggestion'
+} from '../src/domain/aiSuggestion.js'
 
 type FallbackReason = NonNullable<AiSuggestionResult['reason']>
 

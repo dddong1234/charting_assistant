@@ -1,4 +1,4 @@
-import type { Evidence, NoteCategory } from './charting'
+import type { Evidence, NoteCategory } from './charting.js'
 
 export type AiSuggestionEvidence = Pick<
     Evidence,
