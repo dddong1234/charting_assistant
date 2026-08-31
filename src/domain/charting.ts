@@ -18,6 +18,7 @@ export interface Evidence {
   label: string
   detail: string
   subjective: string
+  factText?: string
   state: '확인됨' | '최근'
 }
 

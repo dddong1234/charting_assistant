@@ -5,14 +5,18 @@ import { ChartingWorkspace } from './ChartingWorkspace'
 
 afterEach(cleanup)
 
+const initialFacts = '잠이 안 온다고 호소함. V/S 안정적. PRN 수면제 처방 확인함.'
+const acceptedSleepSoap =
+  'S: “잠이 안 온다”고 호소함.\nO: BP 110/70 mmHg, HR 80회/분, RR 18회/분, BT 36.5℃, SpO₂ 98% 확인됨.\nA: 수면 불편 호소 상태를 간호사가 확인함.\nP: Dr. 박지훈 처방에 따라 Stilnox 10mg PO 투약함.'
+const renderedSleepSoap = acceptedSleepSoap.replaceAll('\n', ' ')
+
 describe('ChartingWorkspace', () => {
-  it('seeds the V/S draft with reviewed synthetic subjective text instead of a TODO marker', () => {
+  it('seeds the editor with source facts instead of prewritten SOAP labels', () => {
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
-    expect(editor).toHaveValue(
-      'S: 특이 호소 없음.\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.',
-    )
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
+    expect(editor).toHaveValue(initialFacts)
+    expect(editor).not.toHaveValue(expect.stringMatching(/(^|\n)[SOAP]:/))
     expect(editor).not.toHaveValue(expect.stringContaining('[간호사 확인 필요]'))
   })
 
@@ -23,12 +27,12 @@ describe('ChartingWorkspace', () => {
     await user.type(screen.getByRole('searchbox', { name: '환자 검색' }), '박○○')
     await user.click(screen.getByRole('button', { name: /1204-1.*박○○/ }))
 
-    expect(screen.getByRole('heading', { name: '1204-1 · 박○○ · M/54' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: /1204-1 · 박○○ M\/54/ })).toBeVisible()
     expect(screen.getByRole('article', { name: '20:00 일반 간호기록' })).toHaveTextContent(
       '복도 보행 1회 시행 후 침상 복귀함.',
     )
-    expect(screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })).toHaveValue(
-      'S: 수술 부위 당김감 경미하게 호소함.\nO: 보호자 동반하여 복도 보행 1회 시행 후 어지럼 호소 없이 침상 복귀함.',
+    expect(screen.getByRole('textbox', { name: '간호 사실 입력' })).toHaveValue(
+      '수술 부위 당김감 경미하게 호소함. 보호자 동반하여 복도 보행 1회 시행 후 어지럼 호소 없이 침상 복귀함.',
     )
     expect(screen.getByLabelText('기록 분류')).toHaveValue('일반')
     expect(screen.getByLabelText('기록 시간')).toHaveValue('20:00')
@@ -46,36 +50,27 @@ describe('ChartingWorkspace', () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
     const composer = screen.getByRole('region', { name: '새 SOAP 간호기록' })
     const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
-    expect(editor).toHaveValue(
-      'S: 특이 호소 없음.\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.',
-    )
-    expect(
-      screen.getByText(
-        'A: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.',
-      ),
-    ).toBeVisible()
-    expect(screen.getByText('P: 상태 확인 결과를 간호사가 검토 후 기록함.')).toBeVisible()
-    expect(within(evidencePanel).getByText('현재 자동완성 근거 기록 1개')).toBeVisible()
-    expect(within(evidencePanel).getByText('현재 자동완성 근거')).toBeVisible()
+    expect(editor).toHaveValue(initialFacts)
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(renderedSleepSoap)
+    expect(within(evidencePanel).getByText('현재 자동완성 근거 기록 3개')).toBeVisible()
+    expect(within(evidencePanel).getAllByText('현재 자동완성 근거')).toHaveLength(3)
 
     await user.click(editor)
     await user.keyboard('{Tab}')
 
-    expect(editor).toHaveValue(
-      'S: 특이 호소 없음.\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.\nA: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.\nP: 상태 확인 결과를 간호사가 검토 후 기록함.',
-    )
-    expect(screen.queryByLabelText('활성 AI 제안')).not.toBeInTheDocument()
+    expect(editor).toHaveValue(acceptedSleepSoap)
+    expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
     expect(within(composer).getByText('AI 문장 채택됨')).toBeVisible()
     expect(within(composer).queryByText('Tab')).not.toBeInTheDocument()
     expect(within(composer).queryByText('Esc')).not.toBeInTheDocument()
     expect(within(evidencePanel).getByText('AI 문장 채택됨')).toBeVisible()
-    expect(within(evidencePanel).getByText('채택한 AI 문장 근거 기록 1개')).toBeVisible()
-    expect(within(evidencePanel).getByText('채택한 AI 문장 근거')).toBeVisible()
-    const evidenceCard = within(evidencePanel).getByRole('article')
-    expect(within(evidenceCard).getByText('확인됨')).toBeVisible()
+    expect(within(evidencePanel).getByText('채택한 AI 문장 근거 기록 3개')).toBeVisible()
+    expect(within(evidencePanel).getAllByText('채택한 AI 문장 근거')).toHaveLength(3)
+    expect(within(evidencePanel).getAllByRole('article')).toHaveLength(3)
+    expect(within(evidencePanel).getAllByText('확인됨')).toHaveLength(2)
     expect(within(evidencePanel).queryByText('현재 자동완성 근거')).not.toBeInTheDocument()
   })
 
@@ -83,15 +78,14 @@ describe('ChartingWorkspace', () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
-    const authoredText =
-      'S: 특이 호소 없음.\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.'
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
+    const authoredText = initialFacts
 
     await user.click(editor)
     await user.tab({ shift: true })
 
     expect(editor).toHaveValue(authoredText)
-    expect(screen.getByLabelText('활성 AI 제안')).toBeVisible()
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).toBeVisible()
     expect(screen.getByLabelText('기록 분류')).toHaveFocus()
   })
 
@@ -99,16 +93,15 @@ describe('ChartingWorkspace', () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
-    const authoredText =
-      'S: 특이 호소 없음.\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.'
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
+    const authoredText = initialFacts
     const composer = screen.getByRole('region', { name: '새 SOAP 간호기록' })
     const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
 
     await user.click(editor)
     await user.keyboard('{Escape}')
 
-    expect(screen.queryByLabelText('활성 AI 제안')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
     expect(editor).toHaveValue(authoredText)
     expect(within(composer).queryByText('AI 제안')).not.toBeInTheDocument()
     expect(within(composer).queryByText('Tab')).not.toBeInTheDocument()
@@ -120,11 +113,16 @@ describe('ChartingWorkspace', () => {
 
     await user.click(within(evidencePanel).getByRole('button', { name: '근거 전체 보기' }))
 
-    const vitalsEvidence = within(evidencePanel).getByRole('article', {
-      name: '14:00 V/S 14:00 근거',
+    const patientStatementEvidence = within(evidencePanel).getByRole('article', {
+      name: '환자 진술 21:30 근거',
     })
-    expect(within(vitalsEvidence).getByText('확인됨')).toBeVisible()
-    for (const accessibleName of ['배액관 18:00 근거', '식이 19:00 근거']) {
+    expect(within(patientStatementEvidence).getByText('최근')).toBeVisible()
+    for (const accessibleName of [
+      'PRN 투약 · Dr. 박지훈 처방 18:12 근거',
+      '최근 V/S 21:35 근거',
+      '배액관 18:00 근거',
+      '식이 19:00 근거',
+    ]) {
       const confirmedEvidence = within(evidencePanel).getByRole('article', {
         name: accessibleName,
       })
@@ -140,7 +138,7 @@ describe('ChartingWorkspace', () => {
 
     const narrative =
       'S: 복부 불편감이 줄었다고 말함.\nO: 침상에서 편안한 자세로 휴식 중임.\nA: 안위 상태를 간호사가 확인함.\nP: 상태 확인 내용을 이어서 기록함.'
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
     const timeInput = screen.getByLabelText('기록 시간')
 
     await user.selectOptions(screen.getByLabelText('기록 분류'), 'PRN')
@@ -163,7 +161,7 @@ describe('ChartingWorkspace', () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
     await user.clear(editor)
     await user.type(editor, 'O: 객관적 사실만 입력함.')
     await user.click(screen.getByRole('button', { name: '기록 추가' }))
@@ -181,7 +179,7 @@ describe('ChartingWorkspace', () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
     await user.clear(editor)
     await user.click(editor)
     await user.paste(
@@ -229,10 +227,9 @@ describe('ChartingWorkspace', () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
     await user.type(editor, ' 확인 중')
-    const currentDraft =
-      'S: 특이 호소 없음.\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨. 확인 중'
+    const currentDraft = `${initialFacts} 확인 중`
 
     await user.click(screen.getByRole('button', { name: '임시 저장' }))
 
@@ -258,13 +255,14 @@ describe('ChartingWorkspace', () => {
     render(<ChartingWorkspace />)
 
     const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
-    expect(within(evidencePanel).getAllByRole('article')).toHaveLength(1)
-    expect(within(evidencePanel).getByText('14:00 V/S · 14:00')).toBeVisible()
+    expect(within(evidencePanel).getAllByRole('article')).toHaveLength(3)
+    expect(within(evidencePanel).getByText('환자 진술 · 21:30')).toBeVisible()
+    expect(within(evidencePanel).getByText('최근 V/S · 21:35')).toBeVisible()
     expect(within(evidencePanel).queryByText('배액관 · 18:00')).not.toBeInTheDocument()
 
     await user.click(within(evidencePanel).getByRole('button', { name: '근거 전체 보기' }))
 
-    expect(within(evidencePanel).getAllByRole('article')).toHaveLength(4)
+    expect(within(evidencePanel).getAllByRole('article')).toHaveLength(5)
     expect(within(evidencePanel).getByText('배액관 · 18:00')).toBeVisible()
     expect(within(evidencePanel).getByRole('button', { name: '근거 접기' })).toBeVisible()
   })
@@ -273,14 +271,12 @@ describe('ChartingWorkspace', () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
     await user.type(editor, ' 직접 확인 중')
 
-    expect(screen.queryByLabelText('활성 AI 제안')).not.toBeInTheDocument()
-    expect(editor).toHaveValue(
-      'S: 특이 호소 없음.\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨. 직접 확인 중',
-    )
-    expect((editor as HTMLTextAreaElement).value).not.toContain('A: BP 128/74 mmHg')
+    expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
+    expect(editor).toHaveValue(`${initialFacts} 직접 확인 중`)
+    expect((editor as HTMLTextAreaElement).value).not.toContain('S: “잠이 안 온다”')
 
     const composer = screen.getByRole('region', { name: '새 SOAP 간호기록' })
     const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
@@ -296,14 +292,11 @@ describe('ChartingWorkspace', () => {
 
     await user.selectOptions(screen.getByLabelText('기록 분류'), 'PRN')
 
-    expect(
-      screen.getByText(
-        'A: 복부 통증 NRS 5점 호소하여 PRN 진통제 투약 후 침상 안정 중임.',
-      ),
-    ).toBeVisible()
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(renderedSleepSoap)
     const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
-    expect(within(evidencePanel).getByText('21:30 PRN · 21:30')).toBeVisible()
-    expect(within(evidencePanel).queryByText('14:00 V/S · 14:00')).not.toBeInTheDocument()
+    expect(within(evidencePanel).getByText('환자 진술 · 21:30')).toBeVisible()
+    expect(within(evidencePanel).getByText('PRN 투약 · Dr. 박지훈 처방 · 18:12')).toBeVisible()
+    expect(within(evidencePanel).getByText('최근 V/S · 21:35')).toBeVisible()
   })
 
   it('shows no AI affordances or linkage for a category without evidence', async () => {
@@ -316,10 +309,8 @@ describe('ChartingWorkspace', () => {
 
     const composer = screen.getByRole('region', { name: '새 SOAP 간호기록' })
     const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
-    expect(screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })).toHaveValue(
-      'S: \nO: ',
-    )
-    expect(screen.queryByLabelText('활성 AI 제안')).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '간호 사실 입력' })).toHaveValue('')
+    expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
     expect(within(composer).queryByText(/AI 제안|AI 문장 채택됨/)).not.toBeInTheDocument()
     expect(within(composer).queryByText('Tab')).not.toBeInTheDocument()
     expect(within(composer).queryByText('Esc')).not.toBeInTheDocument()
@@ -339,38 +330,32 @@ describe('ChartingWorkspace', () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
-    const editor = screen.getByRole('textbox', { name: 'SOAP 간호기록 내용' })
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
     await user.click(editor)
     await user.keyboard('{Tab}')
-    expect(editor).toHaveValue(
-      'S: 특이 호소 없음.\nO: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.\nA: BP 128/74 mmHg, PR 76회/분, RR 18회/분, BT 36.8℃, SpO₂ 97% 확인됨.\nP: 상태 확인 결과를 간호사가 검토 후 기록함.',
-    )
+    expect(editor).toHaveValue(acceptedSleepSoap)
 
-    await user.selectOptions(screen.getByLabelText('기록 분류'), 'PRN')
+    await user.selectOptions(screen.getByLabelText('기록 분류'), '일반')
 
-    const prnSeed =
-      'S: 복부 통증 NRS 5점 호소함.\nO: 복부 통증 NRS 5점 호소하여 PRN 진통제 투약 후 침상 안정 중임.'
-    expect(editor).toHaveValue(prnSeed)
-    expect(screen.getByLabelText('기록 시간')).toHaveValue('21:30')
-    expect(screen.getByText('21:30 PRN · 21:30')).toBeVisible()
+    const generalSeed =
+      '배액관 부위 불편감 호소 없음. JP 배액관 고정 상태 양호하며 맑은 장액성 배액 30 mL 확인됨.'
+    const acceptedGeneralSoap =
+      'S: 배액관 부위 불편감 호소 없음.\nO: JP 배액관 고정 상태 양호하며 맑은 장액성 배액 30 mL 확인됨.\nA: 현재 상태를 간호사가 확인함.\nP: 상태 변화 여부를 이어서 관찰함.'
+    expect(editor).toHaveValue(generalSeed)
+    expect(screen.getByLabelText('기록 시간')).toHaveValue('18:00')
+    expect(screen.getByText('배액관 · 18:00')).toBeVisible()
 
     await user.click(editor)
     await user.keyboard('{Tab}')
-    expect(editor).toHaveValue(
-      `${prnSeed}\nA: 복부 통증 NRS 5점 호소하여 PRN 진통제 투약 후 침상 안정 중임.\nP: 상태 확인 결과를 간호사가 검토 후 기록함.`,
-    )
+    expect(editor).toHaveValue(acceptedGeneralSoap)
     await user.click(screen.getByRole('button', { name: '기록 추가' }))
 
     const timeline = screen.getByRole('region', { name: '오늘 간호기록' })
     expect(within(timeline).getAllByRole('article')).toHaveLength(3)
-    const sameMinuteNotes = within(timeline).getAllByRole('article', {
-      name: '21:30 PRN 간호기록',
-    })
-    expect(sameMinuteNotes).toHaveLength(2)
-    expect(within(sameMinuteNotes[0]).getByText('데모 저장 · 서명 전')).toBeVisible()
-    expect(sameMinuteNotes[0]).toHaveTextContent('S: 복부 통증 NRS 5점 호소함.')
-    expect(sameMinuteNotes[0]).not.toHaveTextContent('[간호사 확인 필요]')
-    expect(within(sameMinuteNotes[1]).getByText('간호사 이○○ · 서명 완료')).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent('21:30 SOAP 간호기록 1건을 추가했습니다.')
+    const addedNote = within(timeline).getByRole('article', { name: '18:00 일반 간호기록' })
+    expect(within(addedNote).getByText('데모 저장 · 서명 전')).toBeVisible()
+    expect(addedNote).toHaveTextContent('S: 배액관 부위 불편감 호소 없음.')
+    expect(addedNote).not.toHaveTextContent('[간호사 확인 필요]')
+    expect(screen.getByRole('status')).toHaveTextContent('18:00 SOAP 간호기록 1건을 추가했습니다.')
   })
 })

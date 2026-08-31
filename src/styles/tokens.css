@@ -6,6 +6,7 @@
   --color-surface-subtle: #f1f5f8;
   --color-surface-selected: #eaf5f8;
   --color-surface-ai: #eaf5f8;
+  --color-surface-header: #0b2339;
   --color-action-primary: #176b87;
   --color-border-focus: #2b7fff;
   --color-focus-forced: Highlight;
@@ -15,6 +16,8 @@
   --color-text-secondary: #5b6876;
   --color-text-muted: #7b8c9d;
   --color-text-on-primary: #ffffff;
+  --color-text-header-muted: #b8ccdb;
+  --color-text-header-accent: #8ac7d1;
   --color-transparent: transparent;
   --color-status-success: #218358;
   --color-status-warning: #b7791f;
@@ -30,11 +33,11 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  --layout-app-header-height: 64px;
-  --layout-patient-rail-width: 288px;
-  --layout-evidence-rail-width: 336px;
-  --layout-workspace-content-width: 720px;
-  --layout-control-height: 40px;
+  --layout-app-header-height: 56px;
+  --layout-patient-rail-width: 268px;
+  --layout-evidence-rail-width: 320px;
+  --layout-workspace-content-width: 852px;
+  --layout-control-height: 30px;
 
   --radius-sm: 4px;
   --radius-md: 8px;
