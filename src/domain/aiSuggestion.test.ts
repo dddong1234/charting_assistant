@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildFallbackSuggestion,
+  isSafeModelDraft,
   parseAiSuggestionRequest,
   validateStructuredSuggestion,
   type AiSuggestionRequest,
@@ -81,6 +82,34 @@ describe('AI suggestion domain', () => {
     })).toBeNull()
   })
 
+  it('does not turn planned ambulation into completed historical care', () => {
+    expect(buildFallbackSuggestion({
+      ...request,
+      draftText: '보행 예정',
+    })).toBeNull()
+  })
+
+  it('does not recycle old evidence for an out-of-range NRS score', () => {
+    expect(buildFallbackSuggestion({
+      ...request,
+      draftText: 'NRS 11점',
+    })).toBeNull()
+  })
+
+  it('allows an unsupported but safe Korean observation to use the model path', () => {
+    expect(isSafeModelDraft({
+      ...request,
+      draftText: '기분이 편안하다고 말함',
+    })).toBe(true)
+  })
+
+  it('blocks unsafe, invalid, and non-Korean noise from the model path', () => {
+    expect(isSafeModelDraft({ ...request, draftText: '불면증 진단' })).toBe(false)
+    expect(isSafeModelDraft({ ...request, draftText: 'NRS 11점' })).toBe(false)
+    expect(isSafeModelDraft({ ...request, draftText: '보행 예정' })).toBe(false)
+    expect(isSafeModelDraft({ ...request, draftText: 'asdf' })).toBe(false)
+  })
+
   it('rejects a malformed request instead of forwarding it to a model', () => {
     expect(parseAiSuggestionRequest({ category: 'PRN', draftText: '', evidence: [] })).toEqual({
       ok: false,
@@ -104,6 +133,21 @@ describe('AI suggestion domain', () => {
     const validation = validateStructuredSuggestion(
       { ...request, draftText: '잘잠' },
       groundedSections,
+    )
+
+    expect(validation).toEqual({
+      valid: false,
+      unsupportedClaims: ['모델 제안이 현재 간호사 입력과 상충함'],
+    })
+  })
+
+  it('rejects a model narrative that reverses a current negative sleep fact', () => {
+    const validation = validateStructuredSuggestion(
+      { ...request, draftText: '잠 못잠' },
+      {
+        ...groundedSections,
+        subjective: '잘 잤다고 말함.',
+      },
     )
 
     expect(validation).toEqual({

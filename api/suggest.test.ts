@@ -70,6 +70,31 @@ describe('POST /api/suggest', () => {
     expect(generate).toHaveBeenCalledWith(requestBody)
   })
 
+  it('uses the model for a safe Korean observation even when no local fallback exists', async () => {
+    const modelOnlyRequest = {
+      ...requestBody,
+      draftText: '기분이 편안하다고 말함',
+    }
+    const modelOnlyOutput = {
+      subjective: '기분이 편안하다고 말함.',
+      objective: '현재 입력 내용을 확인함.',
+      assessment: '편안함을 말한 상태를 간호사가 확인함.',
+      plan: '상태 변화를 이어서 관찰함.',
+      evidenceIds: ['current-draft'],
+    }
+    const generate = vi.fn().mockResolvedValue(modelOnlyOutput)
+    const handler = createSuggestionHandler({ apiKeyAvailable: true, generate })
+
+    const response = await handler(post(modelOnlyRequest))
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      source: 'model',
+      evidenceIds: ['current-draft'],
+    })
+    expect(generate).toHaveBeenCalledWith(modelOnlyRequest)
+  })
+
   it('rejects malformed input without calling the generator', async () => {
     const generate = vi.fn()
     const handler = createSuggestionHandler({ apiKeyAvailable: true, generate })

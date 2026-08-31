@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AiSuggestionResult } from '../../domain/aiSuggestion'
 import { ChartingWorkspace } from './ChartingWorkspace'
@@ -42,6 +42,13 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
     expect(screen.getByRole('status', { name: '기록 충돌 확인' })).toHaveTextContent(
       '현재 입력 “잘잠”이 이전 기록 “잠이 안 온다”와 다릅니다.',
     )
+    const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
+    expect(
+      within(evidencePanel).getByRole('article', { name: '현재 간호사 입력 21:30 근거' }),
+    ).toHaveTextContent('현재 입력 근거')
+    expect(
+      within(evidencePanel).getByRole('article', { name: '환자 진술 21:30 근거' }),
+    ).toHaveTextContent('이전 상충 기록')
   })
 
   it('sends the edited nurse text after debounce while keeping the immediate fallback visible', async () => {
@@ -79,6 +86,29 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
     expect(screen.getByText('입력 기반 AI 제안')).toBeVisible()
     expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(
       'S: 잠이 오지 않는다고 다시 호소함.',
+    )
+  })
+
+  it('shows a verified model suggestion for safe Korean input outside local rules', async () => {
+    const modelOnlySuggestion: AiSuggestionResult = {
+      source: 'model',
+      narrative:
+        'S: 기분이 편안하다고 말함.\nO: 현재 입력 내용을 확인함.\nA: 편안함을 말한 상태를 간호사가 확인함.\nP: 상태 변화를 이어서 관찰함.',
+      evidenceIds: ['current-draft'],
+    }
+    const requestSuggestion = vi.fn<RequestSuggestion>().mockResolvedValue(modelOnlySuggestion)
+    render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)
+
+    fireEvent.change(screen.getByRole('textbox', { name: '간호 사실 입력' }), {
+      target: { value: '기분이 편안하다고 말함' },
+    })
+
+    expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
+    await act(() => vi.advanceTimersByTimeAsync(700))
+
+    expect(screen.getByText('입력 기반 AI 제안')).toBeVisible()
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(
+      'S: 기분이 편안하다고 말함.',
     )
   })
 

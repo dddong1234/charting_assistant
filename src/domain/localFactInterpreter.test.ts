@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { interpretLocalNurseFacts } from './localFactInterpreter'
+import {
+  CURRENT_DRAFT_EVIDENCE_ID,
+  interpretLocalNurseFacts,
+} from './localFactInterpreter'
 
 const evidence = [
   {
@@ -32,6 +35,7 @@ describe('local nurse fact interpreter', () => {
       evidenceIds: ['sleep-claim'],
       message: '현재 입력 “잘잠”이 이전 기록 “잠이 안 온다”와 다릅니다. 현재 상태와 기록 시점을 확인하세요.',
     })
+    expect(result?.evidenceIds).toEqual([CURRENT_DRAFT_EVIDENCE_ID])
   })
 
   it('interprets a short negative sleep phrase without an API', () => {
@@ -47,6 +51,47 @@ describe('local nurse fact interpreter', () => {
       assessment: '수면 불편 호소 상태를 간호사가 확인함.',
       plan: '수면 및 안위 상태 변화를 이어서 관찰함.',
     })
+  })
+
+  it('flags a current negative sleep fact that conflicts with prior positive evidence', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '잠 못잠',
+      evidence: [
+        {
+          id: 'prior-positive-sleep',
+          category: 'PRN',
+          label: '이전 수면 기록',
+          detail: '숙면했다고 말함.',
+          subjective: '잘 잤다고 말함.',
+        },
+      ],
+    })
+
+    expect(result?.conflict?.evidenceIds).toEqual(['prior-positive-sleep'])
+    expect(result?.evidenceIds).toEqual([CURRENT_DRAFT_EVIDENCE_ID])
+  })
+
+  it('treats negated deep sleep as negative instead of positive sleep', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '숙면 못함',
+      evidence,
+    })
+
+    expect(result?.sections.subjective).toBe('잠을 자지 못했다고 호소함.')
+    expect(result?.sections.subjective).not.toBe('잘 잤다고 말함.')
+  })
+
+  it('treats negated good sleep wording as negative sleep', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '수면 상태 양호하지 않음',
+      evidence,
+    })
+
+    expect(result?.sections.subjective).toBe('잠을 자지 못했다고 호소함.')
+    expect(result?.sections.subjective).not.toBe('잘 잤다고 말함.')
   })
 
   it('preserves negation when the nurse enters that nausea is absent', () => {
@@ -77,6 +122,26 @@ describe('local nurse fact interpreter', () => {
       assessment: '현재 통증 정도를 간호사가 확인함.',
       plan: '통증 점수와 상태 변화를 이어서 관찰함.',
     })
+    expect(result?.evidenceIds).toEqual([CURRENT_DRAFT_EVIDENCE_ID])
+  })
+
+  it('separates a different historical pain score as a conflict instead of support', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '통증 3점',
+      evidence: [
+        {
+          id: 'prior-pain-seven',
+          category: 'PRN',
+          label: '이전 통증 기록',
+          detail: '통증 NRS 7점 확인함.',
+          subjective: '통증 7점이라고 말함.',
+        },
+      ],
+    })
+
+    expect(result?.evidenceIds).toEqual([CURRENT_DRAFT_EVIDENCE_ID])
+    expect(result?.conflict?.evidenceIds).toEqual(['prior-pain-seven'])
   })
 
   it('normalizes a drain amount from cc to mL', () => {
@@ -107,6 +172,27 @@ describe('local nurse fact interpreter', () => {
       assessment: '보행 후 상태를 간호사가 확인함.',
       plan: '보행 후 불편감과 상태 변화를 이어서 관찰함.',
     })
+  })
+
+  it('does not convert negated ambulation into completed care', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '보행 못함',
+      evidence,
+    })
+
+    expect(result?.sections.objective).toBe('보행 시행하지 못함.')
+    expect(result?.sections.objective).not.toBe('복도 보행 1회 시행함.')
+  })
+
+  it('preserves negation when the nurse writes corridor ambulation was not possible', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '복도 보행 못함',
+      evidence,
+    })
+
+    expect(result?.sections.objective).toBe('보행 시행하지 못함.')
   })
 
   it('preserves negation for a short dyspnea statement', () => {

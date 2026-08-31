@@ -6,15 +6,29 @@ The deterministic path now reads the current nurse draft before consulting histo
 
 For the synthetic sleep scenario, `잘잠` produces `S: 잘 잤다고 말함.` and never places the prior `잠이 안 온다` statement inside the active SOAP suggestion. The prior/current difference remains visible in a separate accessible `기록 충돌 확인` status, and `aria-describedby` connects it to the editor. The warning is not part of the textarea value and cannot be accepted into SOAP with `Tab`.
 
-The optional server path now receives explicit temporal guidance that current nurse input is the current state and chart evidence is historical context. Domain validation rejects a model narrative that reverses a recognized current sleep polarity, so missing, inactive, or contradictory model output preserves the local result.
+The optional server path now receives explicit temporal guidance that current nurse input is the current state and chart evidence is historical context. Domain validation rejects a model narrative that reverses a recognized current sleep polarity in either direction. Safe Korean input outside the local lexicon can use a mocked model and cite `current-draft`; with no active key it remains suggestion-free instead of recycling history. Invalid `NRS 11점`, planned ambulation, diagnosis/order language, and non-Korean noise are blocked before generation.
 
-Final extension verification:
+Review hardening also verifies that `숙면 못함` and `수면 상태 양호하지 않음` remain negative, `보행 못함` and `복도 보행 못함` never become completed care, and a different prior NRS value is labeled as a conflict rather than supporting evidence. The evidence panel separately labels `현재 입력 근거` and `이전 상충 기록`.
+
+The following earlier baseline is superseded by the final verification block recorded after the review fixes:
 
 ```text
 npm run verify
 
 13 test files passed
 108 tests passed
+Component CSS verification passed.
+Production build passed (43 modules transformed).
+Build artifact verification passed: dist/index.html references 2 bundled assets.
+```
+
+Final review-hardening verification:
+
+```text
+npm run verify
+
+13 test files passed
+121 tests passed
 Component CSS verification passed.
 Production build passed (43 modules transformed).
 Build artifact verification passed: dist/index.html references 2 bundled assets.

@@ -15,7 +15,7 @@ Use the nurse's current synthetic fact text and the visible synthetic chart evid
 
 - The request sent to the server contains the current editor text, selected category, and only the evidence needed for the suggestion.
 - Editing the text schedules a new request and a stale response can never replace a newer suggestion.
-- The UI never loses the active suggestion while waiting for or failing to receive a model response.
+- When a deterministic suggestion exists, the UI never loses it while waiting for or failing to receive a model response. Safe model-only phrasing stays suggestion-free until a verified response arrives.
 - Only a non-empty, ordered S/O/A/P narrative whose evidence IDs and clinical tokens are supported by the request may be shown as model output.
 - `Tab`, `Escape`, evidence highlighting, timeline insertion, and the guided demo keep their existing behavior.
 - Missing API key, timeout, rate limit, malformed output, or network failure visibly falls back to the deterministic demo suggestion.
@@ -48,9 +48,11 @@ current nurse text
 → optional POST /api/suggest upgrade
 ```
 
-The MVP lexicon covers positive/negative sleep, absent nausea, NRS pain scores from 0 to 10, drain volumes in `cc` or `mL`, ward ambulation shorthand, and absent dyspnea. It is intentionally small and deterministic. Detailed existing facts retain the richer evidence-grounded fallback; an unrecognized or unsafe current draft receives no recycled suggestion.
+The MVP lexicon covers positive/negative sleep, absent nausea, NRS pain scores from 0 to 10, drain volumes in `cc` or `mL`, completed/unavailable ward ambulation shorthand, and absent dyspnea. It is intentionally small and deterministic. Detailed existing facts retain the richer evidence-grounded fallback; an unrecognized or unsafe current draft receives no recycled suggestion. Negated sleep and ambulation are evaluated before positive/completed patterns, and planned ambulation is rejected rather than rewritten as performed care.
 
-Current nurse text represents the present charting moment. Existing evidence represents historical context. When their state differs, the current-input SOAP remains reviewable while a separate warning asks the nurse to confirm the state and timestamp. The warning is never part of the note value and therefore cannot be saved accidentally with `Tab`.
+Current nurse text represents the present charting moment. Existing evidence represents historical context. The virtual evidence ID `current-draft` represents the editor text itself. Matching historical concept/value pairs may be supporting evidence; different values for the same concept are shown only as conflicts. When their state differs, the current-input SOAP remains reviewable while a separate warning asks the nurse to confirm the state and timestamp. The warning is never part of the note value and therefore cannot be saved accidentally with `Tab`.
+
+Safe Korean observations outside the deterministic lexicon may use the optional server model. The client does not invent a local SOAP while waiting. The server rejects out-of-range pain scores, planned ambulation, non-Korean noise, and prohibited diagnosis/order language before generation. Without an API key, that model-only input returns no suggestion rather than an unrelated historical fallback.
 
 The server call uses the official OpenAI JavaScript SDK, `store: false`, no tools, a pinned `gpt-5-mini-2025-08-07` default, and `OPENAI_API_KEY` from the server environment only. The browser bundle never receives the key.
 
@@ -85,7 +87,7 @@ The model returns structured `subjective`, `objective`, `assessment`, `plan`, an
 
 ## Grounding and clinical boundaries
 
-- Every returned evidence ID must exist in the request.
+- Every returned evidence ID must exist in the request, except the reserved `current-draft` ID that refers to `draftText` in the same request.
 - Every numeric clinical token and non-standard Latin medication token in the output must appear in the nurse text or supplied evidence.
 - S/O/A/P sections must all be non-empty and in order.
 - Existing unsafe-language rules reject diagnoses, orders, treatment changes, and clinical recommendations.
@@ -100,6 +102,7 @@ The model returns structured `subjective`, `objective`, `assessment`, `plan`, an
 - `입력 기반 AI 제안`: shown only after server validation succeeds.
 - `AI 연결 없음 · 로컬 제안 유지`: non-blocking status after a failed request for recognized input.
 - `규칙 기반 즉시 제안`: retained for detailed fixture text that already has safe, richer evidence mapping.
+- Safe model-only input: no local SOAP is shown until a verified model response arrives; missing API access leaves it suggestion-free.
 
 The guided demo remains deterministic: a visitor can finish all three steps even if the server is slow or unavailable.
 
@@ -114,8 +117,8 @@ The guided demo remains deterministic: a visitor can finish all three steps even
 ## Validation
 
 - Domain unit tests cover fallback construction, request validation, unsupported evidence IDs, unsupported numeric/medication tokens, and unsafe text.
-- Local domain tests cover short positive/negative sleep, negation, pain-score extraction, unit normalization, ambulation, absent dyspnea, historical conflict detection, unsupported-input suppression, and current/model polarity conflict rejection.
-- API tests inject a fake generator and cover success, malformed input, missing key, rate limit, model error, and invalid output without contacting OpenAI.
-- UI tests mock only the HTTP boundary and cover loading, successful replacement, fallback retention, and stale-response cancellation.
+- Local domain tests cover short positive/negative sleep, negation, pain-score extraction, unit normalization, unavailable/completed ambulation, absent dyspnea, bidirectional historical conflicts, supporting provenance, unsupported-input suppression, and current/model polarity conflict rejection.
+- API tests inject a fake generator and cover fallback-backed success, safe model-only success, malformed input, missing key, rate limit, model error, and invalid output without contacting OpenAI.
+- UI tests mock only the HTTP boundary and cover local-first loading, model-only success, fallback retention, provenance labels, and stale-response cancellation.
 - `npm run verify` is the release gate.
 

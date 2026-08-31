@@ -8,13 +8,18 @@ import { StatusChip } from '../../components/StatusChip'
 import { syntheticPatients } from '../../data/syntheticPatients'
 import {
   buildFallbackSuggestion,
+  isSafeModelDraft,
   type AiSuggestionRequest,
   type AiSuggestionResult,
 } from '../../domain/aiSuggestion'
-import { interpretLocalNurseFacts } from '../../domain/localFactInterpreter'
+import {
+  CURRENT_DRAFT_EVIDENCE_ID,
+  interpretLocalNurseFacts,
+} from '../../domain/localFactInterpreter'
 import {
   insertChronologically,
   validateDraft,
+  type Evidence,
   type NoteCategory,
   type NursingNote,
   type Patient,
@@ -124,9 +129,28 @@ export function ChartingWorkspace({
             ? '입력 기반 로컬 제안'
             : '규칙 기반 즉시 제안'
   const linkedEvidenceIds = new Set(linkedSuggestion?.evidenceIds ?? [])
-  const visibleEvidence = evidenceExpanded
-    ? selectedPatient.evidence
-    : selectedPatient.evidence.filter((evidence) => linkedEvidenceIds.has(evidence.id))
+  const conflictingEvidenceIds = new Set(suggestionConflict?.evidenceIds ?? [])
+  const currentDraftEvidence: Evidence = {
+    id: CURRENT_DRAFT_EVIDENCE_ID,
+    timestamp: draft.timestamp,
+    category: draft.category,
+    label: '현재 간호사 입력',
+    detail: draft.narrative,
+    subjective: draft.narrative,
+    state: '최근',
+  }
+  const currentDraftIsLinked = linkedEvidenceIds.has(CURRENT_DRAFT_EVIDENCE_ID)
+  const visibleEvidence = [
+    ...(currentDraftIsLinked ? [currentDraftEvidence] : []),
+    ...(evidenceExpanded
+      ? selectedPatient.evidence
+      : selectedPatient.evidence.filter(
+          (evidence) => (
+            linkedEvidenceIds.has(evidence.id) ||
+            conflictingEvidenceIds.has(evidence.id)
+          ),
+        )),
+  ]
   const isSleepPrnDemoPatient = selectedPatient.id === 'patient-1203-2'
   const recentEvidence = selectedPatient.evidence[0]
   const fallRiskLabel =
@@ -181,8 +205,7 @@ export function ChartingWorkspace({
   }, [tourStep])
 
   useEffect(() => {
-    const fallback = buildFallbackSuggestion(getAiSuggestionRequest(selectedPatient, draft))
-    if (!shouldRequestAi || !draft.narrative.trim() || !fallback) {
+    if (!shouldRequestAi || !draft.narrative.trim()) {
       return
     }
 
@@ -197,6 +220,7 @@ export function ChartingWorkspace({
           }
 
           setSuggestionResult(result)
+          setSuggestionLifecycle('active')
           setAiRequestStatus(result.source === 'model' ? 'model' : 'fallback')
         })
         .catch((error: unknown) => {
@@ -225,12 +249,14 @@ export function ChartingWorkspace({
     nextDraft: PatientDraft,
     requestModel: boolean,
   ) {
-    const fallback = buildFallbackSuggestion(getAiSuggestionRequest(patient, nextDraft))
+    const request = getAiSuggestionRequest(patient, nextDraft)
+    const fallback = buildFallbackSuggestion(request)
+    const canRequestModel = requestModel && isSafeModelDraft(request)
 
     setSuggestionResult(fallback)
     setSuggestionLifecycle(nextDraft.narrative.trim() && fallback ? 'active' : 'none')
-    setShouldRequestAi(requestModel && Boolean(fallback) && Boolean(nextDraft.narrative.trim()))
-    setAiRequestStatus(requestModel && fallback ? 'loading' : 'idle')
+    setShouldRequestAi(canRequestModel && Boolean(nextDraft.narrative.trim()))
+    setAiRequestStatus(canRequestModel ? 'loading' : 'idle')
   }
 
   function restartTour() {
@@ -632,13 +658,21 @@ export function ChartingWorkspace({
                 evidence={evidence}
                 key={evidence.id}
                 linkageLabel={
-                  linkedEvidenceIds.has(evidence.id)
+                  evidence.id === CURRENT_DRAFT_EVIDENCE_ID
+                    ? '현재 입력 근거'
+                    : conflictingEvidenceIds.has(evidence.id)
+                      ? '이전 상충 기록'
+                      : linkedEvidenceIds.has(evidence.id)
                     ? activeSuggestion
                       ? '현재 자동완성 근거'
                       : '채택한 AI 문장 근거'
                     : undefined
                 }
-                provenance={`간호기록 > ${evidence.label}`}
+                provenance={
+                  evidence.id === CURRENT_DRAFT_EVIDENCE_ID
+                    ? '작성 중 > 현재 간호사 입력'
+                    : `간호기록 > ${evidence.label}`
+                }
               />
             ))}
           </div>

@@ -37,13 +37,13 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 | FR-003 | Fact-first unified SOAP editor | The composer uses one text-editing surface. The nurse may enter ordinary facts without SOAP labels; the proposed saved result is one continuous S/O/A/P narrative, never four independent fields. |
 | FR-004 | Inline suggestion | A visible suggestion is not part of the saved narrative until explicitly accepted. |
 | FR-005 | Keyboard control | While editing, `Tab` accepts and `Escape` dismisses the active suggestion. |
-| FR-006 | Evidence provenance | The evidence panel shows the records supporting the current suggestion and their state. |
+| FR-006 | Evidence provenance | The evidence panel distinguishes the current draft, matching supporting records, and prior conflicting records; same-category proximity alone is not labeled as support. |
 | FR-007 | Chronological notes | Adding a valid note inserts one timestamped/category-tagged SOAP record in reverse chronological order. |
 | FR-008 | Nurse control | The nurse can freely change accepted text before adding the record. |
 | FR-009 | Draft feedback | Draft-save and record-save actions return explicit, non-ambiguous feedback. |
 | FR-010 | Safety disclosure | The interface visibly states that it is a synthetic-data demo and suggestions require review. |
 | FR-011 | Guided demo | Every page load starts a skippable three-step guide for fact editing, evidence review, and explicit `Tab` acceptance. The guide does not block chart editing and can be restarted from the header. |
-| FR-012 | Input-grounded model upgrade | After a nurse edits a non-empty synthetic fact draft, the client requests a model suggestion using that current text and chart evidence. Only the latest server-validated result may replace the immediate deterministic suggestion. |
+| FR-012 | Input-grounded model upgrade | After a nurse edits a safe non-empty synthetic fact draft, the client may request a model suggestion using that current text and chart evidence. Only the latest server-validated result may replace a deterministic suggestion or activate a model-only suggestion. |
 | FR-013 | Resilient fallback | Missing/inactive API access, timeout, rate limit, network error, or rejected model output leaves the deterministic suggestion active and shows a textual fallback state. |
 | FR-014 | API-free local fact interpretation | High-value Korean nursing shorthand (`잘잠`, `잠 못잠`, `오심 없음`, `통증 0–10점`, `배액 n cc/mL`, ward ambulation, and absent dyspnea) immediately changes the SOAP draft without a server call. Unsupported or unsafe current input must not recycle a contradictory prior note. |
 | FR-015 | Current/prior conflict notice | When a current fact conflicts with historical evidence, keep the current-input SOAP separate from a visible warning that names the conflict and asks the nurse to confirm state and record time. The warning is never inserted into the saved SOAP narrative. |
@@ -56,7 +56,8 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 - Suggestions must not invent diagnoses, orders, medication changes, or treatment plans.
 - A deterministic suggestion appears immediately. A server model may replace it only after evidence, token-grounding, and unsafe-language validation.
 - The local interpreter treats the nurse's current draft as the current-state source and chart evidence as historical context. It normalizes only recognized high-confidence shorthand; detailed source text keeps the richer evidence-grounded fallback.
-- A model result that semantically contradicts a recognized current sleep fact is rejected before rendering.
+- A model result that semantically contradicts a recognized current sleep fact in either direction is rejected before rendering.
+- Safe Korean phrasing outside the local lexicon may use the optional model, but invalid values, planned care, non-Korean noise, diagnosis/order language, and other prohibited input never reach it.
 - Model inference receives synthetic draft text, selected category, and minimized synthetic evidence only. It must be labeled separately from the deterministic fallback.
 
 ## Non-functional requirements

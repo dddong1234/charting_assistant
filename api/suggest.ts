@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import {
   buildFallbackSuggestion,
+  isSafeModelDraft,
   parseAiSuggestionRequest,
   validateStructuredSuggestion,
   type AiSuggestionRequest,
@@ -55,17 +56,21 @@ export function createSuggestionHandler({
     }
 
     const fallback = buildFallbackSuggestion(parsed.value)
-    if (!fallback) {
+    if (!isSafeModelDraft(parsed.value)) {
       return json({ error: '안전하게 제안할 근거가 없습니다.' }, 422)
     }
 
     if (!apiKeyAvailable) {
-      return json(withReason(fallback, 'missing-key'))
+      return fallback
+        ? json(withReason(fallback, 'missing-key'))
+        : json({ error: 'AI 연결 없이 해석할 수 없는 입력입니다.' }, 422)
     }
 
     const clientKey = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     if (isRateLimited(rateBuckets, clientKey, maxRequestsPerWindow, now())) {
-      return json(withReason(fallback, 'rate-limited'))
+      return fallback
+        ? json(withReason(fallback, 'rate-limited'))
+        : json({ error: 'AI 요청이 잠시 제한되었습니다.' }, 429)
     }
 
     try {
@@ -73,12 +78,16 @@ export function createSuggestionHandler({
       const validation = validateStructuredSuggestion(parsed.value, generated)
 
       if (!validation.valid) {
-        return json(withReason(fallback, 'invalid-model-output'))
+        return fallback
+          ? json(withReason(fallback, 'invalid-model-output'))
+          : json({ error: '검증 가능한 AI 제안을 만들지 못했습니다.' }, 422)
       }
 
       return json(validation.result)
     } catch {
-      return json(withReason(fallback, 'model-error'))
+      return fallback
+        ? json(withReason(fallback, 'model-error'))
+        : json({ error: 'AI 제안 생성에 실패했습니다.' }, 502)
     }
   }
 }

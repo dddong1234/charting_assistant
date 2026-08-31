@@ -4,9 +4,9 @@
 
 Add a framework-free local Korean nursing-fact interpreter before the historical-evidence fallback. For the MVP it recognizes common, high-confidence shorthand for sleep, absent nausea, NRS pain scores, drain volume, ward ambulation, and absent dyspnea, then produces one unified SOAP suggestion without an API key.
 
-Treat the nurse's draft as the current charting moment and existing evidence as historical context. If a recognized current state conflicts with prior evidence, keep the current-input SOAP visible and show a separate textual warning that asks the nurse to confirm the state and record time. Never insert the warning into the SOAP narrative. Unknown text and prohibited diagnosis/order language receive no recycled suggestion.
+Treat the nurse's draft as the current charting moment and existing evidence as historical context. Supporting provenance is limited to the current draft plus historical facts with the same concept and value. A different value for the same concept is labeled as a conflict, not supporting evidence. If a recognized current state conflicts with prior evidence, keep the current-input SOAP visible and show a separate textual warning that asks the nurse to confirm the state and record time. Never insert the warning into the SOAP narrative. Unknown text and prohibited diagnosis/order language receive no recycled suggestion.
 
-The server model remains an optional upgrade. Its prompt states the same temporal precedence, and server validation rejects a model narrative that reverses a recognized current sleep state.
+The server model remains an optional upgrade. Safe Korean observations outside the local lexicon may use the server model when a key is active; the model can cite the virtual `current-draft` source because the nurse text itself is evidence. Invalid values, planned care, non-Korean noise, diagnosis/order language, and other prohibited input are blocked before the model call. Its prompt states the same temporal precedence, and server validation rejects a model narrative that reverses a recognized current sleep state.
 
 ## Reason
 
@@ -23,18 +23,22 @@ This decision supports the existing benefit hypothesis—15 minutes saved per nu
 - Add a large Korean NLP library or custom clinical model. Deferred because the MVP needs a small customer-demoable loop; new dependencies, governed datasets, clinical evaluation, and inference operations would add cost without proving more of the core interaction.
 - Copy a conflict marker into the SOAP body. Rejected because the marker could be accepted and saved as clinical narrative. A separate status preserves nurse review without contaminating the record.
 - Silently prefer the current input and hide the historical difference. Rejected because a changed state or timestamp mismatch is clinically meaningful review context.
+- Label every same-category chart item as supporting evidence. Rejected because category proximity does not prove factual support; current input, matching history, and conflicting history now have distinct provenance labels.
 
 ## Risk
 
 - Pattern coverage is deliberately narrow. Unsupported phrasing produces no local suggestion and depends on the optional server model for broader language handling.
 - Korean shorthand is ambiguous. The supported lexicon therefore stays limited to phrases with high-confidence polarity or values, and the result remains an unsigned suggestion.
+- Negation and intent are safety-critical. Negative sleep/ambulation phrases are checked before positive/completed patterns, `NRS` is constrained to 0–10, and planned ambulation is not converted into performed care.
 - A prior/current difference can be a legitimate state change, not an error. The UI labels it as a confirmation request rather than a clinical alert or diagnosis.
 - Regex and template behavior is not evidence of production clinical accuracy. Real deployment still requires governed data, nurse-led evaluation, auditability, privacy review, and integration validation.
 
 ## Validation method
 
-- Run RED→GREEN domain tests for every supported shorthand class and for unsafe/unknown input suppression.
+- Run RED→GREEN domain tests for every supported shorthand class, Korean negation, invalid/planned facts, and unsafe/unknown input suppression.
 - Verify that `잘잠` never renders `잠이 안 온다` inside the active SOAP suggestion.
+- Verify sleep conflicts in both directions and verify that a different historical pain score is a conflict rather than support.
+- Verify that a safe unsupported Korean observation can reach a mocked model while `NRS 11점`, `보행 예정`, diagnosis/order language, and `asdf` cannot.
 - Verify that the historical difference appears in a separate accessible `status` region and is referenced by the editor description.
 - Verify that a contradictory model response is rejected and the local fallback remains active.
 - Re-run Tab, Escape, evidence provenance, guided demo, timeline ordering, lint, build, and the complete `npm run verify` gate.

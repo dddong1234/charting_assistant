@@ -1,7 +1,8 @@
 import type { Evidence, NoteCategory } from './charting.js'
 import {
+  analyzeLocalNurseFacts,
+  CURRENT_DRAFT_EVIDENCE_ID,
   doesNarrativeContradictLocalFacts,
-  interpretLocalNurseFacts,
 } from './localFactInterpreter.js'
 
 export type AiSuggestionEvidence = Pick<
@@ -87,12 +88,19 @@ export function buildFallbackSuggestion(
     return null
   }
 
-  const localInterpretation = interpretLocalNurseFacts(request)
-  if (localInterpretation && localInterpretation.evidenceIds.length > 0) {
+  const localAnalysis = analyzeLocalNurseFacts(request)
+  if (localAnalysis.status === 'invalid') {
+    return null
+  }
+
+  if (
+    localAnalysis.status === 'recognized' &&
+    localAnalysis.interpretation.evidenceIds.length > 0
+  ) {
     return {
       source: 'fallback',
-      narrative: formatSoapNarrative(localInterpretation.sections),
-      evidenceIds: localInterpretation.evidenceIds,
+      narrative: formatSoapNarrative(localAnalysis.interpretation.sections),
+      evidenceIds: localAnalysis.interpretation.evidenceIds,
     }
   }
 
@@ -135,6 +143,16 @@ export function buildFallbackSuggestion(
   }
 }
 
+export function isSafeModelDraft(request: AiSuggestionRequest): boolean {
+  const draftText = request.draftText.trim()
+
+  return (
+    /[가-힣]/.test(draftText) &&
+    !unsafeSuggestionPattern.test(draftText) &&
+    analyzeLocalNurseFacts(request).status !== 'invalid'
+  )
+}
+
 export function validateStructuredSuggestion(
   request: AiSuggestionRequest,
   value: unknown,
@@ -161,7 +179,10 @@ export function validateStructuredSuggestion(
     }
   }
 
-  const suppliedEvidenceIds = new Set(request.evidence.map((item) => item.id))
+  const suppliedEvidenceIds = new Set([
+    CURRENT_DRAFT_EVIDENCE_ID,
+    ...request.evidence.map((item) => item.id),
+  ])
   const missingEvidenceIds = sections.evidenceIds.filter((id) => !suppliedEvidenceIds.has(id))
 
   if (missingEvidenceIds.length > 0) {
