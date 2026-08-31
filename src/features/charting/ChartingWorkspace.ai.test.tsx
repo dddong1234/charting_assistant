@@ -123,7 +123,7 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
 
     expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
     expect(screen.getByRole('status', { name: 'AI 제안 상태' })).toHaveTextContent(
-      'AI 연결 없음 · 현재 입력은 로컬 규칙으로 제안할 수 없습니다.',
+      'AI 제안을 사용할 수 없습니다 · 현재 입력은 로컬 규칙으로 제안할 수 없습니다.',
     )
   })
 

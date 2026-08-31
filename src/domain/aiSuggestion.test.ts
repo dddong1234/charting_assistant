@@ -109,6 +109,8 @@ describe('AI suggestion domain', () => {
     expect(isSafeModelDraft({ ...request, draftText: '보행 예정' })).toBe(false)
     expect(isSafeModelDraft({ ...request, draftText: 'asdf' })).toBe(false)
     expect(isSafeModelDraft({ ...request, draftText: '추가 처방 필요' })).toBe(false)
+    expect(isSafeModelDraft({ ...request, draftText: '추가 투약 필요' })).toBe(false)
+    expect(isSafeModelDraft({ ...request, draftText: '진통제 투여 필요' })).toBe(false)
   })
 
   it('rejects a malformed request instead of forwarding it to a model', () => {

@@ -105,6 +105,19 @@ describe('POST /api/suggest', () => {
     expect(generate).not.toHaveBeenCalled()
   })
 
+  it.each(['추가 투약 필요', '진통제 투여 필요'])(
+    'blocks medication recommendation input %s before calling the model',
+    async (draftText) => {
+      const generate = vi.fn()
+      const handler = createSuggestionHandler({ apiKeyAvailable: true, generate })
+
+      const response = await handler(post({ ...requestBody, draftText }))
+
+      expect(response.status).toBe(422)
+      expect(generate).not.toHaveBeenCalled()
+    },
+  )
+
   it('rejects order-need language returned by the model', async () => {
     const generate = vi.fn().mockResolvedValue({
       subjective: '기분이 편안하다고 말함.',
@@ -123,6 +136,28 @@ describe('POST /api/suggest', () => {
     expect(response.status).toBe(422)
     expect(generate).toHaveBeenCalledTimes(1)
   })
+
+  it.each(['추가 투약 필요함.', '진통제 투여 필요함.'])(
+    'rejects medication recommendation output %s',
+    async (plan) => {
+      const generate = vi.fn().mockResolvedValue({
+        subjective: '기분이 편안하다고 말함.',
+        objective: '현재 입력 내용을 확인함.',
+        assessment: '편안함을 말한 상태를 간호사가 확인함.',
+        plan,
+        evidenceIds: ['current-draft'],
+      })
+      const handler = createSuggestionHandler({ apiKeyAvailable: true, generate })
+
+      const response = await handler(post({
+        ...requestBody,
+        draftText: '기분이 편안하다고 말함',
+      }))
+
+      expect(response.status).toBe(422)
+      expect(generate).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it('rejects malformed input without calling the generator', async () => {
     const generate = vi.fn()

@@ -41,7 +41,7 @@ This decision supports the existing benefit hypothesis—15 minutes saved per nu
 - Verify that `잘잠` never renders `잠이 안 온다` inside the active SOAP suggestion.
 - Verify sleep conflicts in both directions and verify that a different historical pain score is a conflict rather than support.
 - Verify that a safe unsupported Korean observation can reach a mocked model while `NRS 11점`, `보행 예정`, diagnosis/order language, and `asdf` cannot.
-- Verify that `추가 처방 필요` is blocked both before generation and after model output, while factual `처방 확인` wording remains available to the deterministic fixture.
+- Verify that `추가 처방 필요`, `추가 투약 필요`, and `진통제 투여 필요` are blocked both before generation and after model output, while factual `처방 확인` and completed `투약함` wording remain available to the deterministic fixture.
 - Verify that `NRS 100점`, `NRS 10.5점`, and `NRS -1점` are invalid and never become `NRS 10점` or another local SOAP.
 - Verify that a model-only network failure renders a named accessible status in the editor.
 - Verify that the historical difference appears in a separate accessible `status` region and is referenced by the editor description.

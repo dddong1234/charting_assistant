@@ -10,7 +10,7 @@ The optional server path now receives explicit temporal guidance that current nu
 
 Review hardening also verifies that `숙면 못함` and `수면 상태 양호하지 않음` remain negative, `보행 못함` and `복도 보행 못함` never become completed care, and a different prior NRS value is labeled as a conflict rather than supporting evidence. The evidence panel separately labels `현재 입력 근거` and `이전 상충 기록`.
 
-The second review hardening pass blocks `추가 처방 필요` before a model call and rejects the same prohibited order-need wording in generated output. Complete-token NRS parsing rejects `100`, `10.5`, and `-1`; none can be shortened into a valid local score. Negative-first sleep polarity is shared by local rendering and server validation. A model-only network or missing-key failure now renders the accessible editor status `AI 연결 없음 · 현재 입력은 로컬 규칙으로 제안할 수 없습니다.`
+The second review hardening pass blocks `추가 처방 필요`, `추가 투약 필요`, and `진통제 투여 필요` before a model call and rejects the same prohibited order/medication-recommendation wording in generated output. Complete-token NRS parsing rejects `100`, `10.5`, and `-1`; none can be shortened into a valid local score. Negative-first sleep polarity is shared by local rendering and server validation. A model-only failure now renders the accessible, cause-neutral editor status `AI 제안을 사용할 수 없습니다 · 현재 입력은 로컬 규칙으로 제안할 수 없습니다.`
 
 The following earlier baseline is superseded by the final verification block recorded after the review fixes:
 
@@ -36,13 +36,25 @@ Production build passed (43 modules transformed).
 Build artifact verification passed: dist/index.html references 2 bundled assets.
 ```
 
-Final second-pass verification:
+Final second-pass verification (superseded by the medication-language block below):
 
 ```text
 npm run verify
 
 13 test files passed
 129 tests passed
+Component CSS verification passed.
+Production build passed (43 modules transformed).
+Build artifact verification passed: dist/index.html references 2 bundled assets.
+```
+
+Final medication-language hardening verification:
+
+```text
+npm run verify
+
+13 test files passed
+133 tests passed
 Component CSS verification passed.
 Production build passed (43 modules transformed).
 Build artifact verification passed: dist/index.html references 2 bundled assets.

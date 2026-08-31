@@ -132,7 +132,7 @@ export function ChartingWorkspace({
     ? aiRequestStatus === 'loading'
       ? 'AI 분석 중 · 현재 입력을 검증하고 있습니다.'
       : aiRequestStatus === 'fallback'
-        ? 'AI 연결 없음 · 현재 입력은 로컬 규칙으로 제안할 수 없습니다.'
+        ? 'AI 제안을 사용할 수 없습니다 · 현재 입력은 로컬 규칙으로 제안할 수 없습니다.'
         : null
     : null
   const linkedEvidenceIds = new Set(linkedSuggestion?.evidenceIds ?? [])
