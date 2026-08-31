@@ -267,23 +267,23 @@ describe('ChartingWorkspace', () => {
     expect(within(evidencePanel).getByRole('button', { name: '근거 접기' })).toBeVisible()
   })
 
-  it('dismisses a stale suggestion when the nurse continues typing without committing it', async () => {
+  it('keeps the suggestion active when the nurse deletes one character from the fact input', async () => {
     const user = userEvent.setup()
     render(<ChartingWorkspace />)
 
     const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
-    await user.type(editor, ' 직접 확인 중')
+    await user.click(editor)
+    await user.keyboard('{Backspace}')
 
-    expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
-    expect(editor).toHaveValue(`${initialFacts} 직접 확인 중`)
-    expect((editor as HTMLTextAreaElement).value).not.toContain('S: “잠이 안 온다”')
+    expect(editor).toHaveValue(initialFacts.slice(0, -1))
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(renderedSleepSoap)
 
     const composer = screen.getByRole('region', { name: '새 SOAP 간호기록' })
     const evidencePanel = screen.getByRole('complementary', { name: '제안 근거' })
-    expect(within(composer).queryByText('AI 제안')).not.toBeInTheDocument()
-    expect(within(composer).queryByText('Tab')).not.toBeInTheDocument()
-    expect(within(evidencePanel).getByText('활성 제안 없음')).toBeVisible()
-    expect(within(evidencePanel).queryAllByRole('article')).toHaveLength(0)
+    expect(within(composer).getByText('AI 제안')).toBeVisible()
+    expect(within(composer).getByText('Tab')).toBeVisible()
+    expect(within(evidencePanel).getByText('현재 자동완성 근거 기록 3개')).toBeVisible()
+    expect(within(evidencePanel).getAllByRole('article')).toHaveLength(3)
   })
 
   it('keeps category-specific suggestion copy aligned with its evidence source', async () => {

@@ -388,9 +388,11 @@ export function ChartingWorkspace() {
                 aria-invalid={validationErrors.length > 0}
                 id={`narrative-${selectedPatient.id}`}
                 onChange={(event) => {
-                  setDraft((currentDraft) => ({ ...currentDraft, narrative: event.target.value }))
-                  if (suggestionLifecycle === 'active') {
-                    setSuggestionLifecycle('dismissed')
+                  const nextNarrative = event.target.value
+
+                  setDraft((currentDraft) => ({ ...currentDraft, narrative: nextNarrative }))
+                  if (suggestionLifecycle !== 'accepted') {
+                    setSuggestionLifecycle(nextNarrative.trim() && suggestion ? 'active' : 'none')
                   }
                 }}
                 onKeyDown={handleEditorKeyDown}
