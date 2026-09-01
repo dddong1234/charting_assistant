@@ -24,6 +24,7 @@ The palette uses only phrases already covered by deterministic tests. This prese
 - Fixed examples can imply that the product supports only eight phrases. The copy therefore calls them examples, not a complete command list.
 - Replacing an existing draft is destructive inside the unsaved editor. In this synthetic portfolio MVP the action label explicitly says `입력`, and no saved timeline record is changed.
 - New focusable controls change the natural `Shift+Tab` sequence. Automated keyboard tests now expect the example disclosure control immediately before the editor.
+- Chip hover transitions are disabled under `prefers-reduced-motion`, and forced-colors mode preserves an explicit focus outline for every example control.
 - Example clicks still use the optional model-upgrade path. Missing API access preserves the immediate deterministic suggestion.
 
 ## Validation method
@@ -32,3 +33,4 @@ The palette uses only phrases already covered by deterministic tests. This prese
 - Verify `통증 3점` replaces the draft, focuses the editor, and renders the corresponding local SOAP suggestion.
 - Verify additional examples are absent while collapsed, visible after expansion, and removed after collapse.
 - Re-run guided-tour, AI-suggestion, keyboard, CSS-token, lint, build, and complete verification gates.
+- Make the CSS verification gate fail if reduced-motion transition suppression or forced-colors example focus treatment is removed.

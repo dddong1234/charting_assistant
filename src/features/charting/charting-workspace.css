@@ -1537,6 +1537,10 @@
   .narrative-editor {
     transition: none;
   }
+
+  .example-prompts__list button {
+    transition: none;
+  }
 }
 
 @media (forced-colors: active) {
@@ -1546,6 +1550,10 @@
   .note-composer select:focus-visible,
   .narrative-editor textarea:focus-visible,
   .validation-feedback:focus-visible {
+    outline-color: var(--color-focus-forced);
+  }
+
+  .example-prompts__list button:focus-visible {
     outline-color: var(--color-focus-forced);
   }
 }

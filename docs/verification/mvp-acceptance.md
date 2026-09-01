@@ -4,7 +4,7 @@
 
 The composer now contains an accessible `작성 예시` region immediately before the fact editor. Five supported synthetic phrases are visible by default, and `예시 더보기` reveals three additional polarity/absence examples. Selecting a phrase replaces only the unsaved draft, starts the same local-first suggestion pipeline as typing, clears stale feedback, advances the guided demo when relevant, and returns focus to the editor.
 
-Automated interaction coverage verifies the visible guidance copy, the `통증 3점` draft and SOAP result, editor focus, additional-example expansion/collapse, and the updated backward keyboard order. The example vocabulary is restricted to phrases already covered by the API-free interpreter.
+Automated interaction coverage verifies the visible guidance copy, the `통증 3점` draft and SOAP result, editor focus, additional-example expansion/collapse, and the updated backward keyboard order. The example vocabulary is restricted to phrases already covered by the API-free interpreter. CSS verification also requires prompt transitions to be disabled under reduced motion and requires an explicit forced-colors focus treatment.
 
 An in-app browser visual check was attempted against `http://127.0.0.1:4176/`, but the Windows browser runtime exited during sandbox initialization with `helper_unknown_error`. No visual-pass claim is made. DOM/accessibility tests, responsive token-only CSS, and the production build remain the verification evidence.
 

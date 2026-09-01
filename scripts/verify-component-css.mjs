@@ -51,6 +51,12 @@ function findMediaRule(conditionText) {
   )
 }
 
+function findMediaRules(conditionText) {
+  return Array.from(stylesheet.cssRules).filter(
+    (rule) => 'conditionText' in rule && rule.conditionText === conditionText,
+  )
+}
+
 function requireRule(selector, rules = stylesheet.cssRules) {
   const rule = findStyleRule(rules, selector)
 
@@ -82,6 +88,8 @@ const hoverRule = requireRule('.ui-button:hover:not(:disabled)')
 const disabledRule = requireRule('.ui-button:disabled')
 const focusSelector = '.ui-button:focus-visible,\n.patient-list-item:focus-visible'
 const focusRule = requireRule(focusSelector)
+const exampleFocusSelector = '.example-prompts__list button:focus-visible'
+const exampleFocusRule = requireRule(exampleFocusSelector)
 const tokenRule = requireRule(':root')
 const headerRule = requireRule('.app-header')
 const mediumButtonRule = requireRule('.ui-button--medium')
@@ -119,6 +127,17 @@ if (focusRule) {
     focusRule.style.getPropertyValue('outline-offset'),
     'focus-outline-offset',
   )
+}
+
+if (exampleFocusRule) {
+  const outline = exampleFocusRule.style.outline
+
+  if (
+    !outline.includes('var(--focus-outline-width)') ||
+    !outline.includes('var(--color-border-focus)')
+  ) {
+    failures.push(`example focus outline must use semantic width and color tokens; received ${outline || '(empty)'}`)
+  }
 }
 
 if (tokenRule && headerRule && buttonRule && mediumButtonRule) {
@@ -175,6 +194,21 @@ if (tokenRule && headerRule && buttonRule && mediumButtonRule) {
 }
 
 const forcedColorsRule = findMediaRule('(forced-colors: active)')
+const reducedMotionRules = findMediaRules('(prefers-reduced-motion: reduce)')
+
+if (reducedMotionRules.length === 0) {
+  failures.push('Missing @media (prefers-reduced-motion: reduce) treatment.')
+} else {
+  const reducedExampleRule = reducedMotionRules
+    .map((rule) => findStyleRule(rule.cssRules, '.example-prompts__list button'))
+    .find(Boolean)
+
+  if (!reducedExampleRule) {
+    failures.push('Missing reduced-motion rule for example prompt buttons.')
+  } else if (reducedExampleRule.style.transition !== 'none') {
+    failures.push('example prompt transitions must be disabled for reduced motion.')
+  }
+}
 
 if (!forcedColorsRule) {
   failures.push('Missing @media (forced-colors: active) focus treatment.')
@@ -185,6 +219,21 @@ if (!forcedColorsRule) {
     requireToken(
       'forced-colors focus outline color',
       forcedFocusRule.style.getPropertyValue('outline-color'),
+      'color-focus-forced',
+    )
+  }
+
+
+  const forcedExampleFocusRule = findMediaRules('(forced-colors: active)')
+    .map((rule) => findStyleRule(rule.cssRules, exampleFocusSelector))
+    .find(Boolean)
+
+  if (!forcedExampleFocusRule) {
+    failures.push('Missing forced-colors focus rule for example prompt buttons.')
+  } else {
+    requireToken(
+      'forced-colors example focus outline color',
+      forcedExampleFocusRule.style.getPropertyValue('outline-color'),
       'color-focus-forced',
     )
   }
