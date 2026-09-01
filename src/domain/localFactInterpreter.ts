@@ -18,16 +18,23 @@ export interface LocalSoapSections {
   plan: string
 }
 
+export interface LocalReviewPrompt {
+  id: 'post-medication-response'
+  evidenceIds: string[]
+  message: string
+}
+
 export interface LocalFactInterpretation {
   sections: LocalSoapSections
   evidenceIds: string[]
+  reviewPrompts?: LocalReviewPrompt[]
   conflict?: {
     evidenceIds: string[]
     message: string
   }
 }
 
-interface LocalFactInput {
+export interface LocalFactInput {
   draftText: string
   category: NoteCategory
   evidence: LocalFactEvidence[]
@@ -55,6 +62,8 @@ const ambulationPattern = /(?:복도[^.!?]*(?:한\s*바퀴|1\s*바퀴|보행|걸
 const unavailableAmbulationPattern = /(?:복도\s*)?보행[^.!?]*(?:못|안\s*함|하지\s*못|불가)/
 const plannedAmbulationPattern = /보행[^.!?]*(?:예정|계획|하려\s*함)/
 const absentDyspneaPattern = /(?:숨\s*찬|호흡\s*곤란|호흡\s*불편)[^.!?]*(?:없|안\s*함)/
+const completedSleepMedicationPattern = /(?:Stilnox|Ambien|zolpidem|졸피뎀)(?:\s+\d+(?:\.\d+)?\s*mg)?\s+\b(?:PO|IV|IM|SC)\b\s+투약(?:함|됨|\s*시행함)/i
+const postMedicationSleepResponsePattern = /투약\s*후[^.!?]*(?:잘\s*(?:잠|잤)|잠들|숙면|수면[^.!?]*(?:양호|호전|중))/
 
 export function interpretLocalNurseFacts(
   input: LocalFactInput,
@@ -197,6 +206,15 @@ export function analyzeLocalNurseFacts(input: LocalFactInput): LocalFactAnalysis
     : { status: 'unsupported' }
 }
 
+export function getLocalReviewPrompts(input: LocalFactInput): LocalReviewPrompt[] {
+  const normalizedDraft = input.draftText.replaceAll(/\s+/g, ' ').trim()
+  const currentSignal = factSignalFromText(normalizedDraft)
+
+  return currentSignal
+    ? buildReviewPrompts(currentSignal, input.evidence)
+    : []
+}
+
 export function doesNarrativeContradictLocalFacts(
   draftText: string,
   narrative: string,
@@ -227,10 +245,12 @@ function buildLocalInterpretation(
   const conflictingEvidenceIds = relatedEvidence
     .filter(({ signal }) => signalsConflict(currentSignal, signal))
     .map(({ item }) => item.id)
+  const reviewPrompts = getLocalReviewPrompts(input)
 
   return {
     sections,
     evidenceIds: [CURRENT_DRAFT_EVIDENCE_ID, ...supportingEvidenceIds],
+    ...(reviewPrompts.length > 0 ? { reviewPrompts } : {}),
     ...(conflictingEvidenceIds.length > 0
       ? {
           conflict: {
@@ -242,6 +262,32 @@ function buildLocalInterpretation(
         }
       : {}),
   }
+}
+
+function buildReviewPrompts(
+  currentSignal: LocalFactSignal,
+  evidence: LocalFactEvidence[],
+): LocalReviewPrompt[] {
+  if (currentSignal.kind !== 'sleep' || currentSignal.value !== 'negative') {
+    return []
+  }
+
+  const medicationEvidenceIds = evidence
+    .filter((item) => item.category === 'PRN' && completedSleepMedicationPattern.test(evidenceText(item)))
+    .map((item) => item.id)
+  const hasPostMedicationResponse = evidence.some((item) =>
+    postMedicationSleepResponsePattern.test(evidenceText(item)),
+  )
+
+  if (medicationEvidenceIds.length === 0 || hasPostMedicationResponse) {
+    return []
+  }
+
+  return [{
+    id: 'post-medication-response',
+    evidenceIds: medicationEvidenceIds,
+    message: 'PRN 투약 후 수면 상태·반응을 현재 근거에서 찾지 못했습니다. 기록 전 확인하세요.',
+  }]
 }
 
 function factSignalFromText(text: string): LocalFactSignal | null {

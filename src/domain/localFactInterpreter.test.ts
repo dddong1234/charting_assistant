@@ -54,6 +54,120 @@ describe('local nurse fact interpreter', () => {
     })
   })
 
+  it('requests a post-medication response when sleep medication was given without follow-up evidence', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '잠 못잠',
+      evidence: [
+        ...evidence,
+        {
+          id: 'sleep-medication',
+          category: 'PRN',
+          label: 'PRN 투약',
+          detail: 'Stilnox 10mg PO 투약함.',
+          subjective: '잠이 안 온다고 호소함.',
+        },
+      ],
+    })
+
+    expect(result?.reviewPrompts).toEqual([
+      {
+        id: 'post-medication-response',
+        evidenceIds: ['sleep-medication'],
+        message: 'PRN 투약 후 수면 상태·반응을 현재 근거에서 찾지 못했습니다. 기록 전 확인하세요.',
+      },
+    ])
+  })
+
+  it('does not request a post-medication response when follow-up sleep evidence exists', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '잠 못잠',
+      evidence: [{
+        id: 'sleep-response',
+        category: 'PRN',
+        label: '투약 후 반응',
+        detail: 'Stilnox 10mg PO 투약함. 투약 후 잘 잠.',
+        subjective: '수면 중임.',
+      }],
+    })
+
+    expect(result?.reviewPrompts).toBeUndefined()
+  })
+
+  it('does not request a sleep response for an unrelated PRN medication', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '잠 못잠',
+      evidence: [{
+        id: 'pain-medication',
+        category: 'PRN',
+        label: 'PRN 진통제 투약',
+        detail: 'Acetaminophen 1g IV 투약함.',
+        subjective: '수술 부위 통증 NRS 5점 호소함.',
+      }],
+    })
+
+    expect(result?.reviewPrompts).toBeUndefined()
+  })
+
+  it('does not treat an unrelated analgesic response as the missing sleep follow-up', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '잠 못잠',
+      evidence: [
+        {
+          id: 'sleep-medication',
+          category: 'PRN',
+          label: 'PRN 수면제 투약',
+          detail: 'Stilnox 10mg PO 투약함.',
+          subjective: '잠이 안 온다고 호소함.',
+        },
+        {
+          id: 'pain-response',
+          category: 'PRN',
+          label: 'PRN 진통제 반응',
+          detail: 'Acetaminophen 1g IV 투약함. 투약 후 통증 완화 반응 확인함.',
+          subjective: '수술 부위 통증 감소함.',
+        },
+      ],
+    })
+
+    expect(result?.reviewPrompts?.[0]?.evidenceIds).toEqual(['sleep-medication'])
+  })
+
+  it('ignores sleep-medication administration outside PRN evidence', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '잠 못잠',
+      evidence: [{
+        id: 'non-prn-sleep-medication',
+        category: '일반',
+        label: '자가 투약 진술',
+        detail: 'Stilnox 10mg PO 투약함.',
+        subjective: '입원 전 복용했다고 말함.',
+      }],
+    })
+
+    expect(result?.reviewPrompts).toBeUndefined()
+  })
+
+  it('does not combine a sleep-medication order mention with another medication administration', () => {
+    const result = interpretLocalNurseFacts({
+      category: 'PRN',
+      draftText: '잠 못잠',
+      evidence: [{
+        id: 'mixed-medication-evidence',
+        category: 'PRN',
+        label: '처방 및 투약 확인',
+        detail: 'Stilnox 처방 확인 후 Acetaminophen 1g IV 투약함.',
+        subjective: '잠이 안 온다고 호소함.',
+      }],
+    })
+
+    expect(result?.reviewPrompts).toBeUndefined()
+  })
+
   it('flags a current negative sleep fact that conflicts with prior positive evidence', () => {
     const result = interpretLocalNurseFacts({
       category: 'PRN',

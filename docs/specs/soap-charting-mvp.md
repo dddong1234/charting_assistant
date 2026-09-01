@@ -48,6 +48,7 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 | FR-014 | API-free local fact interpretation | High-value Korean nursing shorthand (`잘잠`, `잠 못잠`, `오심 없음`, `통증 0–10점`, `배액 n cc/mL`, ward ambulation, and absent dyspnea) immediately changes the SOAP draft without a server call. Unsupported or unsafe current input must not recycle a contradictory prior note. |
 | FR-015 | Current/prior conflict notice | When a current fact conflicts with historical evidence, keep the current-input SOAP separate from a visible warning that names the conflict and asks the nurse to confirm state and record time. The warning is never inserted into the saved SOAP narrative. |
 | FR-016 | Discoverable writing examples | The composer shows five supported synthetic nursing phrases and an accessible control for three additional examples. Selecting an example replaces the draft, focuses the editor, and immediately starts the same suggestion flow as typed input. |
+| FR-017 | Contextual missing-fact review | When recognized current input and synthetic evidence imply a high-confidence follow-up fact is absent, show a non-blocking Korean review prompt outside the SOAP narrative. The first supported rule asks for a post-medication sleep response only when sleep medication administration exists and no follow-up response is present. |
 
 ## Demo data and suggestion scope
 
@@ -61,6 +62,7 @@ In one editor, let the nurse enter ordinary clinical facts without manually typi
 - Safe Korean phrasing outside the local lexicon may use the optional model, but invalid values, planned care, non-Korean noise, diagnosis/order language, and other prohibited input never reach it.
 - NRS extraction accepts only a complete integer from 0 to 10; values such as `100`, `10.5`, and `-1` are invalid rather than truncated.
 - The example palette contains only synthetic phrases covered by the deterministic interpreter. It teaches the input grammar without presenting diagnosis, order, or medication-recommendation language.
+- Missing-fact prompts are deterministic review aids, never generated clinical facts. They remain separate from accepted and saved SOAP text and do not block nurse action.
 - Model inference receives synthetic draft text, selected category, and minimized synthetic evidence only. It must be labeled separately from the deterministic fallback.
 
 ## Non-functional requirements
@@ -107,6 +109,7 @@ These are validation hypotheses, not guaranteed outcomes:
 - Hybrid suggestions: deterministic output protects the live demo; a validated server model proves that the current nurse input can change the proposed SOAP note.
 - Local-first semantics: the portfolio demo must react to common ward shorthand even with no API key. Unknown text hides the suggestion instead of presenting an unrelated historical statement with false confidence.
 - Current fact precedence: a current nurse observation describes the present charting moment; prior chart evidence provides context and may legitimately differ. The difference is shown as a review warning outside the note rather than silently overwritten or copied into SOAP.
+- Dynamic protocol differentiation: the copilot must add value beyond reusable text macros by detecting missing follow-up evidence from the current synthetic chart context without inventing or auto-saving the missing fact.
 - Server-only model access: it keeps the key out of the browser and creates one validation boundary before generated text reaches the nurse.
 - Three-panel desktop layout: patient context, authoring, and evidence remain visible together, reducing navigation and provenance-check cost.
 - Auto-start guided demo: portfolio reviewers can discover the core interaction without instruction, while skip and restart controls preserve exploration and repeatable demonstrations.

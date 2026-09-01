@@ -51,6 +51,79 @@ describe('ChartingWorkspace input-grounded AI suggestions', () => {
     ).toHaveTextContent('이전 상충 기록')
   })
 
+  it('shows a pre-chart review prompt outside the suggested SOAP narrative', () => {
+    const requestSuggestion = vi.fn<RequestSuggestion>(
+      () => new Promise<AiSuggestionResult>(() => undefined),
+    )
+    render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)
+
+    fireEvent.change(screen.getByRole('textbox', { name: '간호 사실 입력' }), {
+      target: { value: '잠 못잠' },
+    })
+
+    const reviewPrompt = screen.getByRole('status', { name: '기록 전 확인' })
+    expect(reviewPrompt).toHaveTextContent(
+      'PRN 투약 후 수면 상태·반응을 현재 근거에서 찾지 못했습니다.',
+    )
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).not.toHaveTextContent(
+      '현재 근거에서 찾지 못했습니다.',
+    )
+  })
+
+  it('keeps the pre-chart review prompt visible after accepting the SOAP suggestion', () => {
+    const requestSuggestion = vi.fn<RequestSuggestion>(
+      () => new Promise<AiSuggestionResult>(() => undefined),
+    )
+    render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)
+
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
+    fireEvent.change(editor, {
+      target: { value: '잠 못잠' },
+    })
+    fireEvent.keyDown(editor, { key: 'Tab' })
+
+    expect((editor as HTMLTextAreaElement).value).toContain('S:')
+    expect(screen.getByRole('status', { name: '기록 전 확인' })).toHaveTextContent(
+      'PRN 투약 후 수면 상태·반응을 현재 근거에서 찾지 못했습니다.',
+    )
+  })
+
+  it('keeps the pre-chart review prompt visible when the SOAP suggestion is dismissed', () => {
+    const requestSuggestion = vi.fn<RequestSuggestion>(
+      () => new Promise<AiSuggestionResult>(() => undefined),
+    )
+    render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)
+
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
+    fireEvent.change(editor, { target: { value: '잠 못잠' } })
+    fireEvent.keyDown(editor, { key: 'Escape' })
+
+    expect(screen.queryByLabelText('활성 통합 SOAP 제안')).not.toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '기록 전 확인' })).toBeVisible()
+  })
+
+  it('preserves the source-fact review prompt after accepting alternate model wording', async () => {
+    const alternateModelSuggestion: AiSuggestionResult = {
+      ...modelSuggestion,
+      narrative: modelSuggestion.narrative.replace(
+        '잠이 오지 않는다고 다시 호소함.',
+        '수면 불편을 계속 호소함.',
+      ),
+    }
+    const requestSuggestion = vi.fn<RequestSuggestion>().mockResolvedValue(
+      alternateModelSuggestion,
+    )
+    render(<ChartingWorkspace requestSuggestion={requestSuggestion} />)
+
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
+    fireEvent.change(editor, { target: { value: '잠 못잠' } })
+    await act(() => vi.advanceTimersByTimeAsync(700))
+    fireEvent.keyDown(editor, { key: 'Tab' })
+
+    expect(editor).toHaveValue(alternateModelSuggestion.narrative)
+    expect(screen.getByRole('status', { name: '기록 전 확인' })).toBeVisible()
+  })
+
   it('sends the edited nurse text after debounce while keeping the immediate fallback visible', async () => {
     const requestSuggestion = vi.fn<RequestSuggestion>(
       () => new Promise<AiSuggestionResult>(() => undefined),

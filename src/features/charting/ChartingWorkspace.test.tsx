@@ -288,7 +288,7 @@ describe('ChartingWorkspace', () => {
 
     await user.click(screen.getByRole('button', { name: '임시 저장' }))
 
-    expect(screen.getByRole('status')).toHaveTextContent(
+    expect(screen.getByRole('status', { name: '저장 결과' })).toHaveTextContent(
       '1203-2 환자의 작성 중인 기록을 임시 저장했습니다.',
     )
     expect(editor).toHaveValue(currentDraft)
@@ -300,7 +300,7 @@ describe('ChartingWorkspace', () => {
 
     await user.click(screen.getByRole('button', { name: '기록 저장' }))
 
-    expect(screen.getByRole('status')).toHaveTextContent(
+    expect(screen.getByRole('status', { name: '저장 결과' })).toHaveTextContent(
       '1203-2 환자의 간호기록 2건을 저장했습니다.',
     )
   })

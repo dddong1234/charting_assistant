@@ -1,4 +1,25 @@
 # SOAP Charting Copilot MVP acceptance
+## 2026-09-01 contextual missing-fact review addendum
+
+The API-free interpreter now produces a separate `reviewPrompts` result for the first high-confidence missing follow-up rule. When a nurse enters a negative sleep fact and synthetic evidence contains completed PRN sleep-medication administration but no post-medication sleep response, the editor shows an accessible `기록 전 확인` status. The status remains outside the unified SOAP narrative and does not block Tab acceptance or nurse editing.
+
+Domain coverage proves the prompt appears only for the missing-response case and disappears when follow-up sleep evidence exists. UI coverage proves the Korean prompt is visible and its text is not included in the active SOAP suggestion. The rule is intentionally deterministic, narrow, synthetic-only, and documented as a protocol-differentiation experiment rather than clinical decision support.
+
+The in-app browser visual check was attempted against `http://127.0.0.1:4176/`, but its Windows runtime exited during initialization. No visual-pass claim is made for the new state. DOM/accessibility tests, token-only warning styling, full regression tests, CSS verification, and the production build are the available evidence.
+
+Final verification:
+
+```text
+npm run verify
+
+13 test files passed
+145 tests passed
+Component CSS verification passed.
+Production build passed (43 modules transformed).
+Build artifact verification passed: dist/index.html references 2 bundled assets.
+```
+
+
 
 ## 2026-09-01 discoverable writing examples addendum
 

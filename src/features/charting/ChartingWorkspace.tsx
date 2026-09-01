@@ -14,6 +14,7 @@ import {
 } from '../../domain/aiSuggestion'
 import {
   CURRENT_DRAFT_EVIDENCE_ID,
+  getLocalReviewPrompts,
   interpretLocalNurseFacts,
 } from '../../domain/localFactInterpreter'
 import {
@@ -101,6 +102,7 @@ export function ChartingWorkspace({
   const [patientFilter, setPatientFilter] = useState<'all' | 'needs-review'>('all')
   const [selectedPatientId, setSelectedPatientId] = useState(syntheticPatients[0].id)
   const [draft, setDraft] = useState(initialDraft)
+  const [reviewSourceText, setReviewSourceText] = useState(initialDraft.narrative)
   const [suggestionLifecycle, setSuggestionLifecycle] = useState<SuggestionLifecycle>(() =>
     initialSuggestion ? 'active' : 'none',
   )
@@ -129,6 +131,11 @@ export function ChartingWorkspace({
     getAiSuggestionRequest(selectedPatient, draft),
   )
   const suggestionConflict = activeSuggestion ? localInterpretation?.conflict : undefined
+  const reviewRequest = getAiSuggestionRequest(selectedPatient, draft)
+  const suggestionReviewPrompts = getLocalReviewPrompts({
+    ...reviewRequest,
+    draftText: reviewSourceText,
+  })
   const aiStatusCopy =
     aiRequestStatus === 'loading'
       ? localInterpretation
@@ -200,6 +207,7 @@ export function ChartingWorkspace({
     activeSuggestion ? 'active-soap-suggestion' : '',
     modelOnlyStatusCopy ? 'model-only-suggestion-status' : '',
     suggestionConflict ? 'suggestion-conflict-warning' : '',
+    suggestionReviewPrompts.length > 0 ? 'suggestion-review-prompts' : '',
     validationErrors.length > 0 ? 'draft-validation-feedback' : '',
   ].filter(Boolean).join(' ') || undefined
   const visiblePatients = useMemo(() => {
@@ -277,6 +285,7 @@ export function ChartingWorkspace({
     const canRequestModel = requestModel && isSafeModelDraft(request)
 
     setSuggestionResult(fallback)
+    setReviewSourceText(nextDraft.narrative)
     setSuggestionLifecycle(nextDraft.narrative.trim() && fallback ? 'active' : 'none')
     setShouldRequestAi(canRequestModel && Boolean(nextDraft.narrative.trim()))
     setAiRequestStatus(canRequestModel ? 'loading' : 'idle')
@@ -649,6 +658,19 @@ export function ChartingWorkspace({
                   <span>{suggestionConflict.message}</span>
                 </p>
               ) : null}
+              {suggestionReviewPrompts.length > 0 ? (
+                <div
+                  aria-label="기록 전 확인"
+                  className="narrative-editor__conflict narrative-editor__review-prompts"
+                  id="suggestion-review-prompts"
+                  role="status"
+                >
+                  <strong>기록 전 확인 · {suggestionReviewPrompts.length}건</strong>
+                  {suggestionReviewPrompts.map((prompt) => (
+                    <span key={prompt.id}>{prompt.message}</span>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <div className="note-composer__footer">
               {activeSuggestion ? (
@@ -688,7 +710,7 @@ export function ChartingWorkspace({
                 {validationErrors.map((error) => <p key={error}>{error}</p>)}
               </div>
             ) : null}
-            {feedback ? <p className="demo-feedback" role="status">{feedback}</p> : null}
+            {feedback ? <p aria-label="저장 결과" className="demo-feedback" role="status">{feedback}</p> : null}
           </section>
 
           <section aria-label="오늘 간호기록" className="timeline">

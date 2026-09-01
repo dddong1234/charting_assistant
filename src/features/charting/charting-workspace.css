@@ -873,6 +873,10 @@
   color: var(--color-status-warning);
 }
 
+.narrative-editor__review-prompts {
+  flex-direction: column;
+}
+
 .evidence-rail__summary {
   min-height: 106px;
   flex-wrap: wrap;
