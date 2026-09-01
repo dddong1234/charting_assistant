@@ -20,6 +20,50 @@ describe('ChartingWorkspace', () => {
     expect(editor).not.toHaveValue(expect.stringContaining('[간호사 확인 필요]'))
   })
 
+  it('lets a visitor apply a supported nursing example and continue editing', async () => {
+    const user = userEvent.setup()
+    render(<ChartingWorkspace />)
+
+    const examples = screen.getByRole('region', { name: '작성 예시' })
+    const editor = screen.getByRole('textbox', { name: '간호 사실 입력' })
+
+    expect(within(examples).getByText('어떤 내용을 쓸 수 있나요?')).toBeVisible()
+    expect(within(examples).getByText('체험용 문장을 선택해 시작하세요')).toBeVisible()
+
+    await user.click(within(examples).getByRole('button', { name: '통증 3점 입력' }))
+
+    expect(editor).toHaveValue('통증 3점')
+    expect(editor).toHaveFocus()
+    expect(screen.getByLabelText('활성 통합 SOAP 제안')).toHaveTextContent(
+      'S: 통증 NRS 3점이라고 말함.',
+    )
+  })
+
+  it('expands and collapses additional supported nursing examples', async () => {
+    const user = userEvent.setup()
+    render(<ChartingWorkspace />)
+
+    const examples = screen.getByRole('region', { name: '작성 예시' })
+    const toggle = within(examples).getByRole('button', { name: '예시 더보기' })
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(within(examples).queryByRole('button', { name: '숨찬건 없음 입력' }))
+      .not.toBeInTheDocument()
+
+    await user.click(toggle)
+
+    expect(within(examples).getByRole('button', { name: '잠 못잠 입력' })).toBeVisible()
+    expect(within(examples).getByRole('button', { name: '보행 못함 입력' })).toBeVisible()
+    expect(within(examples).getByRole('button', { name: '숨찬건 없음 입력' })).toBeVisible()
+    expect(within(examples).getByRole('button', { name: '예시 접기' }))
+      .toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(within(examples).getByRole('button', { name: '예시 접기' }))
+
+    expect(within(examples).queryByRole('button', { name: '숨찬건 없음 입력' }))
+      .not.toBeInTheDocument()
+  })
+
   it('keeps the current PRN event out of the already-saved timeline', () => {
     render(<ChartingWorkspace />)
 
@@ -97,7 +141,7 @@ describe('ChartingWorkspace', () => {
 
     expect(editor).toHaveValue(authoredText)
     expect(screen.getByLabelText('활성 통합 SOAP 제안')).toBeVisible()
-    expect(screen.getByLabelText('기록 분류')).toHaveFocus()
+    expect(screen.getByRole('button', { name: '예시 더보기' })).toHaveFocus()
   })
 
   it('dismisses the active suggestion with Escape without changing the editor value', async () => {

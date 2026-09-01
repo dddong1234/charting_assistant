@@ -37,6 +37,20 @@ type SuggestionLifecycle = 'none' | 'active' | 'accepted' | 'dismissed'
 type AiRequestStatus = 'idle' | 'loading' | 'model' | 'fallback'
 type TourStep = 1 | 2 | 3 | null
 
+const primaryExamplePrompts = [
+  '잘잠',
+  '통증 3점',
+  '배액 30cc',
+  '복도 한바퀴 걸음',
+  '오심 없음',
+] as const
+
+const additionalExamplePrompts = [
+  '잠 못잠',
+  '보행 못함',
+  '숨찬건 없음',
+] as const
+
 interface ChartingWorkspaceProps {
   requestSuggestion?: typeof requestAiSuggestion
 }
@@ -95,6 +109,7 @@ export function ChartingWorkspace({
   )
   const [aiRequestStatus, setAiRequestStatus] = useState<AiRequestStatus>('idle')
   const [shouldRequestAi, setShouldRequestAi] = useState(false)
+  const [examplesExpanded, setExamplesExpanded] = useState(false)
   const [evidenceExpanded, setEvidenceExpanded] = useState(false)
   const [tourStep, setTourStep] = useState<TourStep>(1)
   const [feedback, setFeedback] = useState('')
@@ -265,6 +280,19 @@ export function ChartingWorkspace({
     setSuggestionLifecycle(nextDraft.narrative.trim() && fallback ? 'active' : 'none')
     setShouldRequestAi(canRequestModel && Boolean(nextDraft.narrative.trim()))
     setAiRequestStatus(canRequestModel ? 'loading' : 'idle')
+  }
+
+  function applyExamplePrompt(example: string) {
+    const nextDraft = { ...draft, narrative: example }
+
+    setDraft(nextDraft)
+    activateSuggestion(selectedPatient, nextDraft, true)
+    setFeedback('')
+    setValidationErrors([])
+    if (tourStep === 1) {
+      setTourStep(2)
+    }
+    editorRef.current?.focus()
   }
 
   function restartTour() {
@@ -529,6 +557,35 @@ export function ChartingWorkspace({
                 </select>
               </label>
             </div>
+            <section aria-label="작성 예시" className="example-prompts">
+              <div className="example-prompts__header">
+                <strong>어떤 내용을 쓸 수 있나요?</strong>
+                <span>체험용 문장을 선택해 시작하세요</span>
+              </div>
+              <div className="example-prompts__list">
+                {[
+                  ...primaryExamplePrompts,
+                  ...(examplesExpanded ? additionalExamplePrompts : []),
+                ].map((example) => (
+                  <button
+                    aria-label={`${example} 입력`}
+                    key={example}
+                    onClick={() => applyExamplePrompt(example)}
+                    type="button"
+                  >
+                    {example}
+                  </button>
+                ))}
+                <button
+                  aria-expanded={examplesExpanded}
+                  className="example-prompts__toggle"
+                  onClick={() => setExamplesExpanded((expanded) => !expanded)}
+                  type="button"
+                >
+                  {examplesExpanded ? '예시 접기' : '예시 더보기'}
+                </button>
+              </div>
+            </section>
             <label className="visually-hidden" htmlFor={`narrative-${selectedPatient.id}`}>
               간호 사실 입력
             </label>

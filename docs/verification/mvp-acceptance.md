@@ -1,5 +1,25 @@
 # SOAP Charting Copilot MVP acceptance
 
+## 2026-09-01 discoverable writing examples addendum
+
+The composer now contains an accessible `작성 예시` region immediately before the fact editor. Five supported synthetic phrases are visible by default, and `예시 더보기` reveals three additional polarity/absence examples. Selecting a phrase replaces only the unsaved draft, starts the same local-first suggestion pipeline as typing, clears stale feedback, advances the guided demo when relevant, and returns focus to the editor.
+
+Automated interaction coverage verifies the visible guidance copy, the `통증 3점` draft and SOAP result, editor focus, additional-example expansion/collapse, and the updated backward keyboard order. The example vocabulary is restricted to phrases already covered by the API-free interpreter.
+
+An in-app browser visual check was attempted against `http://127.0.0.1:4176/`, but the Windows browser runtime exited during sandbox initialization with `helper_unknown_error`. No visual-pass claim is made. DOM/accessibility tests, responsive token-only CSS, and the production build remain the verification evidence.
+
+Final verification:
+
+```text
+npm run verify
+
+13 test files passed
+135 tests passed
+Component CSS verification passed.
+Production build passed (43 modules transformed).
+Build artifact verification passed: dist/index.html references 2 bundled assets.
+```
+
 ## 2026-08-31 API-free local fact interpretation addendum
 
 The deterministic path now reads the current nurse draft before consulting historical evidence. With no API key, `잘잠`, `잠 못잠`, `오심 없음`, `통증 0–10점`, `배액 n cc/mL`, ward ambulation shorthand, and absent dyspnea immediately produce an input-aware unified SOAP draft. Unknown input and diagnosis/order language no longer recycle an unrelated prior suggestion.
